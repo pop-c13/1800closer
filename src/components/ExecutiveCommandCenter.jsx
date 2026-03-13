@@ -87,61 +87,82 @@ function FloorStatusBar() {
 }
 
 // ---------------------------------------------------------------------------
-// Section B: Daily Pacing Bar
+// Section B: Daily Pacing Widgets
 // ---------------------------------------------------------------------------
-function DailyPacingBar() {
+function DailyPacingWidgets() {
   const { completed, total, noShows, projected, startHour, endHour, currentHour } = floorStatus.dailyPacing;
-  const totalHours = endHour - startHour;
-  const elapsedPct = Math.min(((currentHour - startHour) / totalHours) * 100, 100);
-  const completedPct = ((completed / total) * 100).toFixed(0);
+  const remaining = total - completed - noShows;
+  const completedPct = Math.round((completed / total) * 100);
   const noShowPct = ((noShows / total) * 100).toFixed(1);
   const projectedPct = ((projected / total) * 100).toFixed(1);
+  const totalHours = endHour - startHour;
+  const elapsedPct = Math.min(((currentHour - startHour) / totalHours) * 100, 100);
 
-  // Build hour labels
+  // Hour labels for the timeline
   const hours = [];
   for (let h = startHour; h <= endHour; h += 2) {
     const label = h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h - 12} PM`;
     hours.push({ h, label, pct: ((h - startHour) / totalHours) * 100 });
   }
 
+  const widgets = [
+    { label: 'Completed', value: completed.toLocaleString(), sub: `of ${total.toLocaleString()}`, pct: completedPct, color: '#10b981', ring: 'border-emerald-500/30' },
+    { label: 'Remaining', value: remaining.toLocaleString(), sub: 'appointments', pct: Math.round((remaining / total) * 100), color: '#3b82f6', ring: 'border-blue-500/30' },
+    { label: 'No-Shows', value: noShows.toString(), sub: `${noShowPct}%`, pct: parseFloat(noShowPct), color: '#f59e0b', ring: 'border-amber-500/30' },
+    { label: 'Projected EOD', value: projected.toLocaleString(), sub: `${projectedPct}% completion`, pct: parseFloat(projectedPct), color: '#8b5cf6', ring: 'border-purple-500/30' },
+  ];
+
   return (
-    <div className="w-full px-4 sm:px-6 py-4">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-[11px] uppercase tracking-widest text-white/30 font-bold">Daily Pacing</span>
-        <div className="flex items-center gap-4 text-xs text-white/40">
-          <span>Completed: <span className="text-white/70 font-mono">{completed.toLocaleString()}</span> / <span className="font-mono">{total.toLocaleString()}</span> <span className="text-emerald-400 font-mono">({completedPct}%)</span></span>
-          <span>Remaining: <span className="text-white/70 font-mono">{(total - completed).toLocaleString()}</span></span>
-          <span>No-shows: <span className="text-amber-400 font-mono">{noShows} ({noShowPct}%)</span></span>
-          <span>Projected: <span className="text-white/70 font-mono">{projected.toLocaleString()} ({projectedPct}%)</span></span>
-        </div>
+    <div className="px-4 sm:px-6 py-4 space-y-4">
+      {/* Widget cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {widgets.map((w, i) => (
+          <motion.div
+            key={w.label}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: i * 0.06 }}
+            className={`bg-[#12121a] border ${w.ring} rounded-lg p-4 relative overflow-hidden`}
+          >
+            {/* Background arc */}
+            <div className="absolute top-0 right-0 w-16 h-16 opacity-10" style={{
+              background: `conic-gradient(${w.color} ${Math.min(w.pct, 100) * 3.6}deg, transparent 0deg)`,
+              borderRadius: '0 8px 0 50%',
+            }} />
+            <div className="text-[10px] uppercase tracking-widest font-bold mb-1" style={{ color: `${w.color}99` }}>
+              {w.label}
+            </div>
+            <div className="text-2xl font-black font-mono text-white leading-none">{w.value}</div>
+            <div className="text-[11px] text-white/30 mt-1">{w.sub}</div>
+            {/* Mini progress bar */}
+            <div className="w-full h-1 rounded-full bg-white/5 mt-2 overflow-hidden">
+              <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(w.pct, 100)}%`, backgroundColor: w.color }} />
+            </div>
+          </motion.div>
+        ))}
       </div>
-      <div className="relative w-full h-6 rounded bg-white/5 overflow-hidden">
-        {/* Completed fill */}
-        <div
-          className="absolute top-0 left-0 h-full rounded-l transition-all duration-700"
-          style={{ width: `${completedPct}%`, background: 'linear-gradient(90deg, #059669, #10b981)' }}
-        />
-        {/* Now marker */}
-        <div
-          className="absolute top-0 h-full w-0.5 bg-white/60 z-10"
-          style={{ left: `${elapsedPct}%` }}
-        >
-          <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] text-white/50 font-mono whitespace-nowrap">
-            NOW
+
+      {/* Timeline bar */}
+      <div>
+        <div className="relative w-full h-5 rounded bg-white/5 overflow-hidden">
+          <div
+            className="absolute top-0 left-0 h-full rounded-l transition-all duration-700"
+            style={{ width: `${completedPct}%`, background: 'linear-gradient(90deg, #059669, #10b981)' }}
+          />
+          <div
+            className="absolute top-0 h-full w-0.5 bg-white/60 z-10"
+            style={{ left: `${elapsedPct}%` }}
+          >
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 text-[9px] text-white/50 font-mono whitespace-nowrap">NOW</div>
           </div>
         </div>
-      </div>
-      {/* Hour markers */}
-      <div className="relative w-full h-4 mt-0.5">
-        {hours.map(({ h, label, pct }) => (
-          <span
-            key={h}
-            className="absolute text-[10px] text-white/20 font-mono -translate-x-1/2"
-            style={{ left: `${pct}%` }}
-          >
-            {label}
-          </span>
-        ))}
+        <div className="relative w-full h-4 mt-0.5">
+          {hours.map(({ h, label, pct }) => (
+            <span key={h} className="absolute text-[10px] text-white/20 font-mono -translate-x-1/2" style={{ left: `${pct}%` }}>
+              {label}
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -426,115 +447,102 @@ function ConversionFunnel() {
 }
 
 // ---------------------------------------------------------------------------
-// Section E, Column 3: Impact Simulator
+// Section E, Column 3: Rest-of-Day Simulator
 // ---------------------------------------------------------------------------
-function ImpactSimulator() {
-  const [closeRateIncrease, setCloseRateIncrease] = useState(5);
-  const [minutesSaved, setMinutesSaved] = useState(3);
-  const [recoveryPct, setRecoveryPct] = useState(25);
+function RestOfDaySimulator() {
+  const [simCloseRate, setSimCloseRate] = useState(36);
 
-  // Baseline constants
-  const baselineCloseRate = 0.36;
-  const appointmentsPerDay = 1020;
-  const workingDays = 22;
-  const avgDeal = 2497;
-  const totalReps = 170;
-  const avgCallMinutes = 100; // 10 hrs / 6 calls = ~100 min total call time per rep; each call ~16.7 min
-  const callsPerRep = 6;
-  const tooExpensiveCount = 89;
+  // Baseline from today's actual data
+  const { completed, total, noShows } = floorStatus.dailyPacing;
+  const remaining = total - completed - noShows;
+  const todayCloses = revenueData.today.deals; // 15
+  const todayRevenue = revenueData.today.amount; // $37,485
+  const avgDeal = todayCloses > 0 ? Math.round(todayRevenue / todayCloses) : 2497;
+  const currentCloseRate = completed > 0 ? Math.round((todayCloses / completed) * 100) : 36;
 
-  // 1. Close rate improvement
-  const additionalRevCR = (closeRateIncrease / 100) * appointmentsPerDay * workingDays * avgDeal;
+  // "Current pace" projection
+  const currentPaceCloses = Math.round(remaining * (currentCloseRate / 100));
+  const currentPaceRevenue = currentPaceCloses * avgDeal;
+  const currentPaceEOD = todayRevenue + currentPaceRevenue;
+  const currentPaceTotalCloses = todayCloses + currentPaceCloses;
 
-  // 2. Time saved → extra calls → extra revenue
-  // Each rep saves minutesSaved per call * callsPerRep calls = total minutes saved per day
-  // Extra calls per rep = minutesSaved * callsPerRep / avgCallDuration(~17 min per call)
-  const avgCallDuration = 100 / callsPerRep; // ~16.7 min
-  const extraCallsPerRep = (minutesSaved * callsPerRep) / avgCallDuration;
-  const extraCallsFloor = extraCallsPerRep * totalReps;
-  const additionalRevTime = extraCallsFloor * baselineCloseRate * avgDeal * workingDays;
+  // "Simulated rate" projection
+  const simCloses = Math.round(remaining * (simCloseRate / 100));
+  const simRevenue = simCloses * avgDeal;
+  const simEOD = todayRevenue + simRevenue;
+  const simTotalCloses = todayCloses + simCloses;
 
-  // 3. Recovery of "Too Expensive" losses
-  const recoveryRev = tooExpensiveCount * (recoveryPct / 100) * avgDeal;
-
-  const totalImpact = additionalRevCR + additionalRevTime + recoveryRev;
+  // Delta
+  const revenueDelta = simEOD - currentPaceEOD;
+  const closesDelta = simTotalCloses - currentPaceTotalCloses;
 
   return (
     <div>
       <div className="text-[10px] uppercase tracking-widest text-white/30 font-bold mb-3">
-        Impact Simulator
+        Rest-of-Day Simulator
       </div>
-      <div className="space-y-5">
-        {/* Slider 1: Close rate */}
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs text-white/50">Improve close rate by</label>
-            <span className="text-xs font-mono text-emerald-400 font-bold">+{closeRateIncrease} pts</span>
-          </div>
-          <input
-            type="range"
-            min={1}
-            max={15}
-            value={closeRateIncrease}
-            onChange={(e) => setCloseRateIncrease(Number(e.target.value))}
-            className="w-full h-1.5 rounded-full appearance-none bg-white/10 accent-emerald-400 cursor-pointer"
-          />
-          <div className="text-[11px] text-emerald-400/70 font-mono mt-1">
-            +{formatCurrency(Math.round(additionalRevCR))}/mo
-          </div>
-        </div>
 
-        {/* Slider 2: Call time */}
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs text-white/50">Reduce avg call time by</label>
-            <span className="text-xs font-mono text-blue-400 font-bold">{minutesSaved} min</span>
-          </div>
-          <input
-            type="range"
-            min={1}
-            max={10}
-            value={minutesSaved}
-            onChange={(e) => setMinutesSaved(Number(e.target.value))}
-            className="w-full h-1.5 rounded-full appearance-none bg-white/10 accent-blue-400 cursor-pointer"
-          />
-          <div className="text-[11px] text-blue-400/70 font-mono mt-1">
-            +{formatCurrency(Math.round(additionalRevTime))}/mo
-          </div>
+      {/* Current pace snapshot */}
+      <div className="p-3 rounded-lg bg-white/[0.03] border border-white/5 mb-4">
+        <div className="text-[10px] uppercase tracking-wider text-white/30 font-bold mb-2">At Current Pace ({currentCloseRate}%)</div>
+        <div className="flex items-baseline justify-between">
+          <span className="text-white/50 text-xs">End-of-day revenue</span>
+          <span className="text-white/70 font-mono text-lg font-bold">{formatFullCurrency(currentPaceEOD)}</span>
         </div>
-
-        {/* Slider 3: Recovery */}
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs text-white/50">Recover "Too Expensive" losses</label>
-            <span className="text-xs font-mono text-amber-400 font-bold">{recoveryPct}%</span>
-          </div>
-          <input
-            type="range"
-            min={5}
-            max={50}
-            value={recoveryPct}
-            onChange={(e) => setRecoveryPct(Number(e.target.value))}
-            className="w-full h-1.5 rounded-full appearance-none bg-white/10 accent-amber-400 cursor-pointer"
-          />
-          <div className="text-[11px] text-amber-400/70 font-mono mt-1">
-            +{formatCurrency(Math.round(recoveryRev))}/mo
-          </div>
+        <div className="flex items-baseline justify-between mt-1">
+          <span className="text-white/50 text-xs">Total closes</span>
+          <span className="text-white/50 font-mono">{currentPaceTotalCloses}</span>
+        </div>
+        <div className="flex items-baseline justify-between mt-1">
+          <span className="text-white/50 text-xs">Remaining appointments</span>
+          <span className="text-white/40 font-mono">{remaining}</span>
         </div>
       </div>
 
-      {/* Total */}
-      <div className="mt-5 pt-4 border-t border-white/5">
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-white/40 uppercase tracking-wider font-bold">Projected Impact</span>
-          <span className="text-lg font-mono font-black text-emerald-400">
-            +{formatCurrency(Math.round(totalImpact))}/mo
+      {/* Slider */}
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="text-xs text-white/50">What if we close at...</label>
+          <span className="text-sm font-mono text-brand-orange font-bold">{simCloseRate}%</span>
+        </div>
+        <input
+          type="range"
+          min={10}
+          max={60}
+          value={simCloseRate}
+          onChange={(e) => setSimCloseRate(Number(e.target.value))}
+          className="w-full h-2 rounded-full appearance-none bg-white/10 accent-orange-500 cursor-pointer"
+        />
+        <div className="flex justify-between text-[10px] text-white/15 font-mono mt-0.5">
+          <span>10%</span>
+          <span>60%</span>
+        </div>
+      </div>
+
+      {/* Simulated outcome */}
+      <div className="p-3 rounded-lg border border-brand-orange/20 bg-brand-orange/5">
+        <div className="text-[10px] uppercase tracking-wider text-brand-orange/60 font-bold mb-2">
+          Closing at {simCloseRate}% for the rest of the day
+        </div>
+        <div className="flex items-baseline justify-between">
+          <span className="text-white/60 text-xs">End-of-day revenue</span>
+          <span className="text-white font-mono text-xl font-black">{formatFullCurrency(simEOD)}</span>
+        </div>
+        <div className="flex items-baseline justify-between mt-1">
+          <span className="text-white/60 text-xs">Total closes</span>
+          <span className="text-white/70 font-mono font-semibold">{simTotalCloses}</span>
+        </div>
+      </div>
+
+      {/* Delta */}
+      {simCloseRate !== currentCloseRate && (
+        <div className="mt-3 flex items-center justify-between text-xs">
+          <span className="text-white/30">vs. current pace</span>
+          <span className={`font-mono font-bold ${revenueDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            {revenueDelta >= 0 ? '+' : ''}{formatFullCurrency(revenueDelta)} · {closesDelta >= 0 ? '+' : ''}{closesDelta} closes
           </span>
         </div>
-        <div className="text-[10px] text-white/20 mt-1">
-          Based on {appointmentsPerDay.toLocaleString()} appts/day, {workingDays} working days, ${avgDeal.toLocaleString()} avg deal
-        </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -655,25 +663,20 @@ export default function ExecutiveCommandCenter() {
       {/* ===== SECTION A: FLOOR STATUS BAR ===== */}
       <FloorStatusBar />
 
-      {/* ===== SECTION B: DAILY PACING ===== */}
-      <DailyPacingBar />
+      {/* ===== AI BRIEFING (TOP) ===== */}
+      <div className="mt-2 mb-2">
+        <AIDailyBriefing />
+      </div>
 
-      {/* ===== SECTION C: REVENUE SCOREBOARD ===== */}
+      {/* ===== DAILY PACING WIDGETS ===== */}
+      <DailyPacingWidgets />
+
+      {/* ===== REVENUE SCOREBOARD ===== */}
       <div className="mb-4">
         <RevenueScoreboard />
       </div>
 
-      {/* ===== SECTIONS D + F: FLOOR MAP + LIVE FEED ===== */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 px-4 sm:px-6 mb-4">
-        <div className="lg:col-span-2 bg-[#12121a] border border-white/5 rounded-lg p-4">
-          <FloorMap />
-        </div>
-        <div className="bg-[#12121a] border border-white/5 rounded-lg p-4">
-          <LiveFeed />
-        </div>
-      </div>
-
-      {/* ===== SECTION E: THREE COLUMNS ===== */}
+      {/* ===== THREE COLUMNS: LEADERBOARD + FUNNEL + SIMULATOR ===== */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 px-4 sm:px-6 mb-4">
         <div className="bg-[#12121a] border border-white/5 rounded-lg p-4">
           <ManagerLeaderboard />
@@ -682,13 +685,18 @@ export default function ExecutiveCommandCenter() {
           <ConversionFunnel />
         </div>
         <div className="bg-[#12121a] border border-white/5 rounded-lg p-4">
-          <ImpactSimulator />
+          <RestOfDaySimulator />
         </div>
       </div>
 
-      {/* ===== SECTION G: AI BRIEFING ===== */}
-      <div className="mb-6">
-        <AIDailyBriefing />
+      {/* ===== FLOOR MAP + LIVE FEED (BOTTOM) ===== */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 px-4 sm:px-6 mb-6">
+        <div className="lg:col-span-2 bg-[#12121a] border border-white/5 rounded-lg p-4">
+          <FloorMap />
+        </div>
+        <div className="bg-[#12121a] border border-white/5 rounded-lg p-4">
+          <LiveFeed />
+        </div>
       </div>
 
       {/* Footer */}
