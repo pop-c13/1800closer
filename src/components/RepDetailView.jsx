@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Phone, TrendingUp, Clock, DollarSign, AlertTriangle, User, Sparkles } from 'lucide-react';
-import { teamMembers, mockTeamPerformance, repPitchHistory, repInsights } from '../data/sampleData';
+import { teamMembers, mockTeamPerformance, repPitchHistory, repInsights, completedSessionsWithScorecard } from '../data/sampleData';
 import { getRepStats } from '../lib/sessionDB';
+import PostCallScorecard from './PostCallScorecard';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -47,6 +48,7 @@ export default function RepDetailView() {
   const member = teamMembers.find(t => t.id === repId);
 
   const [dbStats, setDbStats] = useState(null);
+  const [scorecardSession, setScorecardSession] = useState(null);
 
   useEffect(() => {
     if (!member) return;
@@ -257,6 +259,7 @@ export default function RepDetailView() {
                     <th className="px-4 py-3 text-center text-xs uppercase tracking-wider font-semibold text-white/40">Price</th>
                     <th className="px-4 py-3 text-center text-xs uppercase tracking-wider font-semibold text-white/40">Obj.</th>
                     <th className="px-4 py-3 text-center text-xs uppercase tracking-wider font-semibold text-white/40">Adherence</th>
+                    <th className="px-4 py-3 text-right text-xs uppercase tracking-wider font-semibold text-white/40">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -316,6 +319,56 @@ export default function RepDetailView() {
                             {pitch.scriptAdherence}%
                           </span>
                         </td>
+
+                        {/* View Scorecard */}
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => {
+                              const match = completedSessionsWithScorecard.find(
+                                s => s.leadName === pitch.leadName || s.businessName === pitch.businessName
+                              );
+                              const scData = match || {
+                                leadName: pitch.leadName,
+                                businessName: pitch.businessName,
+                                duration: pitch.duration,
+                                outcome: pitch.outcome,
+                                discoveryAnswered: 7,
+                                objectionsHandled: pitch.objectionsHandled || 0,
+                                coachTipsUsed: 3,
+                                savingsPresented: 5200,
+                                priceQuoted: pitch.priceQuoted || 0,
+                                totalSale: pitch.priceQuoted || 0,
+                                totalSlides: 35,
+                                slidesPresented: 30,
+                                flowScore: pitch.scriptAdherence || 82,
+                                callNotes: '',
+                                products: pitch.outcome === 'closed' ? [
+                                  { name: 'Core Accounting Package', price: 2949, terms: '2-pay' },
+                                ] : [],
+                                scorecard: {
+                                  flowScore: pitch.scriptAdherence || 82,
+                                  flowChecklist: [
+                                    { label: 'Followed recommended slide path', status: 'pass' },
+                                    { label: 'Covered all required sections', status: 'pass' },
+                                    { label: 'Used the tax calculator', status: pitch.scriptAdherence >= 85 ? 'pass' : 'fail' },
+                                    { label: 'Completed discovery (7/9 questions)', status: 'warn' },
+                                    { label: 'Skipped: Loan Agreement (optional)', status: 'skip' },
+                                  ],
+                                  slides: {
+                                    presented: 30, total: 35,
+                                    longest: { slideNum: 5, title: 'Discovery', time: 262 },
+                                    fastest: { slideNum: 3, title: 'Trustpilot', time: 18 },
+                                  },
+                                  aiSummary: match?.scorecard?.aiSummary || null,
+                                },
+                              };
+                              setScorecardSession(scData);
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/60 text-xs font-medium hover:bg-white/10 hover:text-white/80 transition-colors"
+                          >
+                            Scorecard
+                          </button>
+                        </td>
                       </motion.tr>
                     );
                   })}
@@ -366,6 +419,13 @@ export default function RepDetailView() {
         </section>
 
       </main>
+
+      {/* Scorecard overlay */}
+      <PostCallScorecard
+        show={!!scorecardSession}
+        sessionData={scorecardSession}
+        onDone={() => setScorecardSession(null)}
+      />
     </div>
   );
 }

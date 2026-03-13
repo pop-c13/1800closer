@@ -5,10 +5,11 @@ import {
   Eye, MessageSquare, Phone, Users, DollarSign, TrendingUp,
   Clock, AlertTriangle, BarChart3, ArrowUpRight, ChevronRight
 } from 'lucide-react';
-import { mockActiveSessions, mockRecentSessions, mockTeamPerformance, topObjections, teamMembers } from '../data/sampleData';
+import { mockActiveSessions, mockRecentSessions, mockTeamPerformance, topObjections, teamMembers, completedSessionsWithScorecard } from '../data/sampleData';
 import { subscribeToActiveSessions } from '../lib/realtimeSync';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { getRecentSessions, getTodayTeamStats } from '../lib/sessionDB';
+import PostCallScorecard from './PostCallScorecard';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -64,6 +65,7 @@ export default function ManagerHub() {
   const [liveSessions, setLiveSessions] = useState(null); // null = not yet loaded, [] = no sessions
   const [dbRecentSessions, setDbRecentSessions] = useState(null);
   const [dbTeamStats, setDbTeamStats] = useState(null);
+  const [scorecardSession, setScorecardSession] = useState(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -272,7 +274,16 @@ export default function ManagerHub() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <span className={`w-2.5 h-2.5 rounded-full ring-4 ${statusColor[session.status]} ${statusRing[session.status]}`} />
-                      <span className="text-white font-bold text-base">{session.repName}</span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const member = teamMembers.find(t => t.name === session.repName);
+                          if (member) navigate(`/manager/rep/${member.id}`);
+                        }}
+                        className="text-white font-bold text-base hover:text-brand-orange transition-colors underline-offset-2 hover:underline"
+                      >
+                        {session.repName}
+                      </button>
                     </div>
                     <span className="text-white/30 text-xs uppercase tracking-wider font-semibold">{session.status}</span>
                   </div>
@@ -442,7 +453,15 @@ export default function ManagerHub() {
                   {/* Session info */}
                   <div className="md:col-span-4">
                     <p className="text-white text-sm font-semibold">
-                      {session.repName}
+                      <button
+                        onClick={() => {
+                          const member = teamMembers.find(t => t.name === session.repName);
+                          if (member) navigate(`/manager/rep/${member.id}`);
+                        }}
+                        className="hover:text-brand-orange transition-colors underline-offset-2 hover:underline"
+                      >
+                        {session.repName}
+                      </button>
                       <span className="text-white/30 mx-1.5">&rarr;</span>
                       <span className="text-white/70">{session.leadName}</span>
                     </p>
@@ -474,7 +493,51 @@ export default function ManagerHub() {
 
                   {/* Action */}
                   <div className="md:col-span-2 flex justify-end">
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/60 text-xs font-medium hover:bg-white/10 hover:text-white/80 transition-colors">
+                    <button
+                      onClick={() => {
+                        // Find matching scorecard data or build from session
+                        const match = completedSessionsWithScorecard.find(
+                          s => s.repName === session.repName && s.outcome === session.outcome
+                        );
+                        const scData = match || {
+                          leadName: session.leadName,
+                          businessName: session.businessName,
+                          duration: session.duration,
+                          outcome: session.outcome,
+                          discoveryAnswered: 7,
+                          objectionsHandled: session.objections || 0,
+                          coachTipsUsed: 3,
+                          savingsPresented: 5200,
+                          priceQuoted: session.priceQuoted || 0,
+                          totalSale: session.priceQuoted || 0,
+                          totalSlides: 35,
+                          slidesPresented: 30,
+                          flowScore: 82,
+                          callNotes: '',
+                          products: session.outcome === 'closed' ? [
+                            { name: 'Core Accounting Package', price: 2949, terms: '2-pay' },
+                          ] : [],
+                          scorecard: {
+                            flowScore: 82,
+                            flowChecklist: [
+                              { label: 'Followed recommended slide path', status: 'pass' },
+                              { label: 'Covered all required sections', status: 'pass' },
+                              { label: 'Used the tax calculator', status: 'pass' },
+                              { label: 'Completed discovery (7/9 questions)', status: 'warn' },
+                              { label: 'Skipped: Loan Agreement (optional)', status: 'skip' },
+                            ],
+                            slides: {
+                              presented: 30, total: 35,
+                              longest: { slideNum: 5, title: 'Discovery', time: 262 },
+                              fastest: { slideNum: 3, title: 'Trustpilot', time: 18 },
+                            },
+                            aiSummary: match?.scorecard?.aiSummary || null,
+                          },
+                        };
+                        setScorecardSession(scData);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/60 text-xs font-medium hover:bg-white/10 hover:text-white/80 transition-colors"
+                    >
                       View Summary
                       <ChevronRight size={13} />
                     </button>
@@ -589,6 +652,13 @@ export default function ManagerHub() {
         </section>
 
       </main>
+
+      {/* Scorecard overlay */}
+      <PostCallScorecard
+        show={!!scorecardSession}
+        sessionData={scorecardSession}
+        onDone={() => setScorecardSession(null)}
+      />
     </div>
   );
 }
