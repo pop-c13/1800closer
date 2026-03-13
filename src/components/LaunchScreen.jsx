@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, Users, ChevronRight, Calendar, Plus, Star, Clock, X } from 'lucide-react';
+import { Phone, Users, ChevronRight, Calendar, Plus, Star, Clock, X, Crown } from 'lucide-react';
 import { useApp, SAVINGS_SLIDE } from '../context/AppContext';
-import { teamMembers, deckTypes, todaySchedule } from '../data/sampleData';
+import { teamMembers, deckTypes, todaySchedule, executives } from '../data/sampleData';
 import slides from '../data/slides';
 import recommendDeck from '../data/recommendDeck';
 
@@ -175,6 +175,10 @@ export default function LaunchScreen() {
       setRole('manager');
       navigate('/manager');
     }
+    if (selectedRole === 'executive') {
+      setRole('executive');
+      navigate('/executive');
+    }
   }, [selectedRole]);
 
   // Count non-completed appointments
@@ -326,6 +330,17 @@ export default function LaunchScreen() {
               >
                 <Users size={13} />
                 Manager
+              </button>
+              <button
+                onClick={() => setSelectedRole('executive')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                  selectedRole === 'executive'
+                    ? 'bg-white/10 text-white ring-1 ring-white/20'
+                    : 'text-white/40 hover:text-white/60'
+                }`}
+              >
+                <Crown size={13} />
+                Executive
               </button>
             </div>
 

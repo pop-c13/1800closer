@@ -515,3 +515,260 @@ export const repInsights = {
     'Close rate improves 30% when spouse income is discussed early',
   ],
 };
+
+// ============================================================
+// EXPANDED MOCK DATA — 170 Reps, 15 Managers, Executives
+// ============================================================
+
+// ---------- 11. Executives ----------
+export const executives = [
+  { id: 'exec_vp', name: 'Ryan Torres', role: 'executive', title: 'VP of Sales' },
+  { id: 'exec_cso', name: 'Nicole Park', role: 'executive', title: 'Chief Strategy Officer' },
+];
+
+// ---------- 12. Managers (15) ----------
+export const managers = [
+  { id: 'mgr_01', name: 'Alex Rivera', reps: 12, activeCalls: 3, closedToday: 4, closeRate: 38, revenue: 9974, appointmentsDone: 28, appointmentsTotal: 36 },
+  { id: 'mgr_02', name: 'Morgan Chen', reps: 11, activeCalls: 4, closedToday: 3, closeRate: 34, revenue: 7485, appointmentsDone: 24, appointmentsTotal: 33 },
+  { id: 'mgr_03', name: 'Jordan Patel', reps: 12, activeCalls: 2, closedToday: 5, closeRate: 41, revenue: 12475, appointmentsDone: 30, appointmentsTotal: 36 },
+  { id: 'mgr_04', name: 'Taylor Brooks', reps: 11, activeCalls: 3, closedToday: 2, closeRate: 29, revenue: 4990, appointmentsDone: 22, appointmentsTotal: 33 },
+  { id: 'mgr_05', name: 'Casey Williams', reps: 12, activeCalls: 3, closedToday: 4, closeRate: 36, revenue: 9976, appointmentsDone: 26, appointmentsTotal: 36 },
+  { id: 'mgr_06', name: 'Reese Nakamura', reps: 11, activeCalls: 2, closedToday: 3, closeRate: 33, revenue: 7491, appointmentsDone: 25, appointmentsTotal: 33 },
+  { id: 'mgr_07', name: 'Dakota Singh', reps: 12, activeCalls: 4, closedToday: 1, closeRate: 25, revenue: 2495, appointmentsDone: 20, appointmentsTotal: 36 },
+  { id: 'mgr_08', name: 'Avery Thompson', reps: 11, activeCalls: 3, closedToday: 3, closeRate: 35, revenue: 7485, appointmentsDone: 27, appointmentsTotal: 33 },
+  { id: 'mgr_09', name: 'Quinn Fischer', reps: 11, activeCalls: 2, closedToday: 2, closeRate: 31, revenue: 4990, appointmentsDone: 23, appointmentsTotal: 33 },
+  { id: 'mgr_10', name: 'Skyler Okafor', reps: 12, activeCalls: 3, closedToday: 4, closeRate: 39, revenue: 9976, appointmentsDone: 29, appointmentsTotal: 36 },
+  { id: 'mgr_11', name: 'Riley Gomez', reps: 11, activeCalls: 2, closedToday: 2, closeRate: 30, revenue: 4990, appointmentsDone: 21, appointmentsTotal: 33 },
+  { id: 'mgr_12', name: 'Jamie Larsen', reps: 12, activeCalls: 3, closedToday: 3, closeRate: 37, revenue: 7479, appointmentsDone: 27, appointmentsTotal: 36 },
+  { id: 'mgr_13', name: 'Sam Morales', reps: 11, activeCalls: 3, closedToday: 1, closeRate: 26, revenue: 2493, appointmentsDone: 19, appointmentsTotal: 33 },
+  { id: 'mgr_14', name: 'Drew Kapoor', reps: 11, activeCalls: 2, closedToday: 2, closeRate: 32, revenue: 4990, appointmentsDone: 24, appointmentsTotal: 33 },
+  { id: 'mgr_15', name: 'Finley Park', reps: 11, activeCalls: 3, closedToday: 3, closeRate: 35, revenue: 7485, appointmentsDone: 26, appointmentsTotal: 33 },
+];
+
+// ---------- 13. All 170 Reps ----------
+const REP_FIRST_NAMES = [
+  'Jake', 'Sarah', 'Chris', 'Danielle', 'Tyler', 'Marcus', 'Priya', 'Noah', 'Olivia', 'Ethan',
+  'Sophia', 'Liam', 'Emma', 'Mason', 'Ava', 'Logan', 'Isabella', 'Lucas', 'Mia', 'Aiden',
+  'Charlotte', 'James', 'Amelia', 'Benjamin', 'Harper', 'Elijah', 'Evelyn', 'William', 'Abigail', 'Henry',
+  'Emily', 'Alexander', 'Ella', 'Sebastian', 'Scarlett', 'Jack', 'Grace', 'Owen', 'Chloe', 'Daniel',
+  'Victoria', 'Michael', 'Riley', 'Julian', 'Aria', 'David', 'Luna', 'Leo', 'Zoey', 'Gabriel',
+  'Nora', 'Samuel', 'Lily', 'Carter', 'Eleanor', 'Jayden', 'Hannah', 'Wyatt', 'Lillian', 'Matthew',
+  'Addison', 'Luke', 'Aubrey', 'Asher', 'Ellie', 'Isaac', 'Stella', 'Levi', 'Natalie', 'Nathan',
+  'Zoe', 'Caleb', 'Leah', 'Ryan', 'Hazel', 'Adrian', 'Violet', 'Lincoln', 'Aurora', 'Eli',
+  'Savannah', 'Ian', 'Audrey', 'Connor', 'Brooklyn', 'Josiah', 'Bella', 'Cameron', 'Claire', 'Thomas',
+  'Skylar', 'Dylan', 'Lucy', 'Landon', 'Paisley', 'Jonathan', 'Anna', 'Cooper', 'Caroline', 'Axel',
+  'Genesis', 'Miles', 'Aaliyah', 'Robert', 'Kennedy', 'Jaxon', 'Kinsley', 'Grayson', 'Allison', 'Kai',
+  'Maya', 'Hunter', 'Sarah', 'Angel', 'Madelyn', 'Jordan', 'Stella', 'Leo', 'Alice', 'Everett',
+  'Hailey', 'Ezra', 'Eva', 'Nolan', 'Emilia', 'Ryder', 'Quinn', 'Antonio', 'Piper', 'Colton',
+  'Ruby', 'Parker', 'Serenity', 'Xavier', 'Willow', 'Dominic', 'Jade', 'Carson', 'Peyton', 'Jason',
+  'Rylee', 'Austin', 'Ivy', 'Declan', 'Sadie', 'Brooks', 'Maria', 'Easton', 'Valentina', 'Roman',
+  'Reagan', 'Weston', 'Naomi', 'Maxwell', 'Sophie', 'Braxton', 'Camila', 'Jace', 'Elena', 'Miles',
+  'Mila', 'Tristan', 'Nevaeh', 'Damian', 'Autumn', 'Harrison', 'Ariana', 'Tucker', 'Gianna', 'Hudson',
+];
+
+const REP_LAST_NAMES = [
+  'Morrison', 'Kim', 'Lee', 'Cruz', 'Brooks', 'Johnson', 'Sharma', 'Williams', 'Davis', 'Garcia',
+  'Rodriguez', 'Martinez', 'Anderson', 'Taylor', 'Thomas', 'Moore', 'Jackson', 'Martin', 'White', 'Harris',
+  'Thompson', 'Clark', 'Lewis', 'Robinson', 'Walker', 'Young', 'Allen', 'King', 'Wright', 'Hill',
+  'Scott', 'Green', 'Adams', 'Baker', 'Nelson', 'Carter', 'Mitchell', 'Perez', 'Roberts', 'Turner',
+  'Phillips', 'Campbell', 'Parker', 'Evans', 'Edwards', 'Collins', 'Stewart', 'Sanchez', 'Morris', 'Rogers',
+  'Reed', 'Cook', 'Morgan', 'Bell', 'Murphy', 'Bailey', 'Rivera', 'Cooper', 'Richardson', 'Cox',
+  'Howard', 'Ward', 'Torres', 'Peterson', 'Gray', 'Ramirez', 'James', 'Watson', 'Brooks', 'Kelly',
+  'Sanders', 'Price', 'Bennett', 'Wood', 'Barnes', 'Ross', 'Henderson', 'Coleman', 'Jenkins', 'Perry',
+  'Powell', 'Long', 'Patterson', 'Hughes', 'Flores', 'Washington', 'Butler', 'Simmons', 'Foster', 'Gonzales',
+  'Bryant', 'Alexander', 'Russell', 'Griffin', 'Diaz', 'Hayes', 'Myers', 'Ford', 'Hamilton', 'Graham',
+  'Sullivan', 'Wallace', 'Woods', 'Cole', 'West', 'Jordan', 'Owens', 'Reynolds', 'Fisher', 'Ellis',
+  'Harrison', 'Gibson', 'Mcdonald', 'Cruz', 'Marshall', 'Ortiz', 'Gomez', 'Murray', 'Freeman', 'Wells',
+  'Webb', 'Simpson', 'Stevens', 'Tucker', 'Porter', 'Hunter', 'Hicks', 'Crawford', 'Henry', 'Boyd',
+  'Mason', 'Morales', 'Kennedy', 'Warren', 'Dixon', 'Ramos', 'Reyes', 'Burns', 'Gordon', 'Shaw',
+  'Holmes', 'Rice', 'Robertson', 'Hunt', 'Black', 'Daniels', 'Palmer', 'Mills', 'Nichols', 'Grant',
+  'Knight', 'Ferguson', 'Rose', 'Stone', 'Hawkins', 'Dunn', 'Perkins', 'Hudson', 'Spencer', 'Gardner',
+  'Stephens', 'Payne', 'Pierce', 'Berry', 'Matthews', 'Arnold', 'Wagner', 'Willis', 'Ray', 'Watkins',
+];
+
+const LEAD_SOURCES = ['LegalZoom', 'BTP', 'Organic', 'Referral', 'ZenBusiness', 'IncFile'];
+const CALL_STAGES = ['Discovery', 'Discovery', 'Deductions', 'Deductions', 'Deductions', 'Structure', 'Pricing', 'Pricing', 'Closing'];
+const BUSINESS_NAMES_POOL = [
+  'Thompson Contracting', "Chen's Auto Repair", 'Patel Tech Solutions', 'Garcia Landscaping',
+  'Wilson Photography', 'Lee Consulting Group', 'Johnson Plumbing', 'Davis Fitness Studio',
+  'Martinez Construction', 'Anderson Design Co', 'Taylor Real Estate', 'Brown Bakery',
+  'Miller Cleaning Services', 'Moore Marketing', 'White Dental Practice', 'Harris Law Firm',
+  'Clark Electric', 'Lewis Roofing', 'Walker Painting', 'Hall Tutoring', 'Allen Catering',
+  'Young Media Group', 'King Auto Sales', 'Wright Moving Co', 'Hill Accounting',
+  'Scott Pet Grooming', 'Green Lawn Care', 'Adams IT Services', 'Baker Food Truck',
+  'Nelson Home Staging', 'Carter Pool Service', 'Mitchell Yoga Studio', 'Perez Tile Work',
+  'Roberts Insurance', 'Turner Web Design', 'Phillips HVAC', 'Campbell Security',
+  'Evans Tree Service', 'Edwards Salon', 'Collins Daycare', 'Stewart Drywall',
+  'Sanchez Trucking', 'Morris Event Planning',
+];
+
+// Generate 170 reps
+export const allReps = Array.from({ length: 170 }, (_, i) => {
+  const managerId = managers[i % managers.length].id;
+  let status = 'idle';
+  if (i < 42) status = 'on_call';
+  else if (i < 45) status = 'just_closed';
+  else if (i < 50) status = 'break';
+
+  const firstName = REP_FIRST_NAMES[i % REP_FIRST_NAMES.length];
+  const lastName = REP_LAST_NAMES[i % REP_LAST_NAMES.length];
+
+  return {
+    id: `rep_${String(i + 1).padStart(3, '0')}`,
+    name: `${firstName} ${lastName}`,
+    managerId,
+    managerName: managers[i % managers.length].name,
+    status,
+    // For active call reps, add call details
+    ...(status === 'on_call' ? {
+      leadName: BUSINESS_NAMES_POOL[i % BUSINESS_NAMES_POOL.length],
+      currentSlide: Math.floor(5 + Math.random() * 30),
+      totalSlides: 35,
+      callDuration: Math.floor(300 + Math.random() * 1500),
+      stage: CALL_STAGES[Math.floor(Math.random() * CALL_STAGES.length)],
+      pacing: i < 5 ? 'critical' : i < 12 ? 'behind' : 'on_pace',
+      leadSource: LEAD_SOURCES[Math.floor(Math.random() * LEAD_SOURCES.length)],
+    } : {}),
+    ...(status === 'just_closed' ? {
+      lastClose: BUSINESS_NAMES_POOL[Math.floor(Math.random() * BUSINESS_NAMES_POOL.length)],
+      closedAmount: Math.floor(2000 + Math.random() * 3000),
+      closedAt: new Date(Date.now() - Math.random() * 1800000),
+    } : {}),
+  };
+});
+
+// ---------- 14. Completed Sessions with Scorecard Data (25) ----------
+export const completedSessionsWithScorecard = Array.from({ length: 25 }, (_, i) => {
+  const outcomes = ['closed', 'closed', 'closed', 'follow-up', 'follow-up', 'no-sale', 'no-sale', 'closed', 'follow-up', 'no-sale'];
+  const outcome = outcomes[i % outcomes.length];
+  const rep = allReps[i % allReps.length];
+  const duration = Math.floor(1200 + Math.random() * 900);
+  const slidesPresented = Math.floor(28 + Math.random() * 8);
+  const discoveryAnswered = Math.floor(6 + Math.random() * 4);
+  const flowScore = Math.floor(68 + Math.random() * 28);
+  const objCount = Math.floor(Math.random() * 4);
+  const savings = Math.floor(3500 + Math.random() * 5000);
+  const price = outcome === 'closed' ? (2949 + Math.floor(Math.random() * 2000)) : (outcome === 'follow-up' ? 2949 : 0);
+
+  return {
+    id: `session_${String(i + 1).padStart(3, '0')}`,
+    repId: rep.id,
+    repName: rep.name,
+    leadName: BUSINESS_NAMES_POOL[i % BUSINESS_NAMES_POOL.length],
+    businessName: BUSINESS_NAMES_POOL[i % BUSINESS_NAMES_POOL.length],
+    leadSource: LEAD_SOURCES[i % LEAD_SOURCES.length],
+    date: new Date(Date.now() - i * 3600000 * 3),
+    duration,
+    outcome,
+    totalSlides: 35,
+    slidesPresented,
+    discoveryAnswered,
+    discoveryTotal: 9,
+    flowScore,
+    objectionsHandled: objCount,
+    objectionTypes: ['Too expensive', 'Need to think', 'Have accountant', 'Spouse decides'].slice(0, objCount),
+    coachTipsUsed: Math.floor(2 + Math.random() * 5),
+    savingsPresented: savings,
+    priceQuoted: price,
+    roi: price > 0 ? Math.round((savings / price) * 10) / 10 : 0,
+    overTime: duration > 1800,
+    products: outcome === 'closed' ? [
+      { name: 'Core Accounting Package', price: 2949, terms: i % 3 === 0 ? 'full' : '2-pay', perPayment: i % 3 === 0 ? 2949 : 1474.50 },
+      ...(Math.random() > 0.5 ? [{ name: 'Bookkeeping Full Service', price: 1800, terms: 'full', perPayment: 1800 }] : []),
+    ] : [],
+    totalSale: outcome === 'closed' ? price : 0,
+    paymentMethod: ['Visa', 'Mastercard', 'Amex', 'Discover'][i % 4],
+    notInterestedReason: outcome === 'no-sale' ? ['No Money', 'Has Accountant', 'No Revenue', 'Going Local', 'Personal Only'][i % 5] : null,
+    followUpDate: outcome === 'follow-up' ? new Date(Date.now() + (2 + Math.random() * 5) * 86400000).toISOString().split('T')[0] : null,
+    followUpTemp: outcome === 'follow-up' ? ['Hot', 'Warm', 'Cold'][i % 3] : null,
+    scorecard: {
+      pacing: { elapsed: duration, target: 1800, status: duration <= 1800 ? 'on_time' : duration <= 1980 ? 'warning' : 'over_time' },
+      flowScore,
+      flowChecklist: [
+        { label: 'Followed recommended slide path', status: Math.random() > 0.2 ? 'pass' : 'warn' },
+        { label: 'Covered all required sections', status: Math.random() > 0.3 ? 'pass' : 'warn' },
+        { label: 'Used the tax calculator', status: Math.random() > 0.35 ? 'pass' : 'fail' },
+        { label: `Completed discovery (${discoveryAnswered}/9 questions)`, status: discoveryAnswered >= 8 ? 'pass' : 'warn' },
+        { label: 'Skipped: Loan Agreement (optional)', status: 'skip' },
+      ],
+      engagement: {
+        discoveryAnswered,
+        discoveryTotal: 9,
+        objectionsHandled: objCount,
+        coachTipsUsed: Math.floor(2 + Math.random() * 5),
+        savingsPresented: savings,
+        priceQuoted: price,
+        roi: price > 0 ? Math.round((savings / price) * 10) / 10 : 0,
+      },
+      slides: {
+        presented: slidesPresented,
+        total: 35,
+        avgTimePerSlide: Math.round(duration / slidesPresented),
+        longest: { slideNum: 5, title: 'Discovery', time: Math.floor(180 + Math.random() * 120) },
+        fastest: { slideNum: 3, title: 'Trustpilot', time: Math.floor(12 + Math.random() * 15) },
+      },
+      aiSummary: outcome === 'closed'
+        ? `Strong close. Rep effectively used the calculator to show $${savings.toLocaleString()}/yr in savings, which clearly resonated. Discovery was thorough at ${discoveryAnswered}/9. Consider spending more time on the structure section to reinforce the S-Corp election value.`
+        : outcome === 'follow-up'
+        ? `Solid consultation but lead needed time. Discovery was good at ${discoveryAnswered}/9. The ${price > 0 ? `$${price.toLocaleString()} quote` : 'pricing'} seemed to cause hesitation. Try addressing price anchoring earlier and emphasize the ROI comparison before revealing the investment.`
+        : `Lead was not a fit. ${['Budget was the primary barrier', 'Already has an accountant they\'re satisfied with', 'No business revenue yet to justify the service', 'Prefers a local provider'][i % 4]}. Flow score of ${flowScore}% suggests ${flowScore >= 80 ? 'the rep handled it well despite the outcome' : 'some opportunities to improve engagement before reaching pricing'}.`,
+    },
+  };
+});
+
+// ---------- 15. Live Feed Events ----------
+export const liveFeedEvents = [
+  { time: '10:14 AM', type: 'close', text: 'Jake Morrison closed Thompson Contracting — $2,949' },
+  { time: '10:12 AM', type: 'warning', text: 'Sarah Kim over time (32:15) with Chen\'s Auto' },
+  { time: '10:08 AM', type: 'progress', text: 'Danielle Cruz moved to pricing with Patel Tech' },
+  { time: '10:05 AM', type: 'new', text: 'New appointment: Tyler Brooks assigned to Chris Lee' },
+  { time: '10:01 AM', type: 'insight', text: '3 reps skipped the calculator today' },
+  { time: '9:58 AM', type: 'close', text: 'Marcus Johnson closed Garcia Landscaping — $4,749' },
+  { time: '9:55 AM', type: 'warning', text: 'Noah Williams over time (31:42) with Wilson Photography' },
+  { time: '9:52 AM', type: 'progress', text: 'Priya Sharma entered closing phase with Lee Consulting' },
+  { time: '9:48 AM', type: 'close', text: 'Olivia Davis closed Martinez Construction — $2,949' },
+  { time: '9:45 AM', type: 'new', text: 'Walk-in: Sophia Rodriguez assigned to Jordan Fischer' },
+  { time: '9:41 AM', type: 'progress', text: 'Ethan Garcia reached pricing with Anderson Design' },
+  { time: '9:38 AM', type: 'insight', text: 'LegalZoom leads converting at 41% today (above avg)' },
+  { time: '9:35 AM', type: 'close', text: 'Liam Martinez closed Taylor Real Estate — $3,749' },
+  { time: '9:30 AM', type: 'warning', text: 'Emma Anderson took 4:22 on discovery slide (avg: 2:10)' },
+  { time: '9:27 AM', type: 'new', text: 'New appointment: Mason Taylor assigned to Avery Thompson' },
+  { time: '9:22 AM', type: 'close', text: 'Ava Thomas closed Brown Bakery — $2,949' },
+  { time: '9:18 AM', type: 'progress', text: 'Logan Moore showing calculator to Miller Cleaning Services' },
+  { time: '9:15 AM', type: 'insight', text: 'BTP leads closing at 48% this week — highest source' },
+  { time: '9:10 AM', type: 'close', text: 'Isabella Jackson closed White Dental Practice — $4,749' },
+  { time: '9:05 AM', type: 'new', text: 'Shift start: 42 reps online, 68 appointments scheduled until noon' },
+];
+
+// ---------- 16. Revenue Mock Data ----------
+export const revenueData = {
+  today: { amount: 37485, deals: 15, trend: 8, label: 'vs yesterday' },
+  week: { amount: 148920, deals: 62, trend: 3, label: 'vs last week' },
+  month: { amount: 547200, deals: 219, trend: 12, target: 740000, label: 'March' },
+  quarter: { amount: 1641600, deals: 657, trend: 7, target: 2000000, label: 'Q1' },
+};
+
+// ---------- 17. Floor Status ----------
+export const floorStatus = {
+  repsOnCalls: 42,
+  totalReps: 170,
+  byStage: {
+    Discovery: 12,
+    Deductions: 18,
+    Structure: 4,
+    Pricing: 5,
+    Closing: 3,
+  },
+  dailyPacing: {
+    completed: 387,
+    total: 1020,
+    noShows: 12,
+    projected: 1008,
+    startHour: 8,
+    endHour: 18,
+    currentHour: 10.5,
+  },
+};
+
+// ---------- 18. AI Daily Briefing ----------
+export const aiDailyBriefing = "Today's pace is 8% above yesterday with 15 closes by 10:30 AM. The team is converting LegalZoom leads at 41% this week, up from 36% last week \u2014 likely driven by the calculator adoption push. Watch: 4 reps have gone over 30 minutes on 3+ calls this week (Sarah Kim, Noah Williams, Mason Taylor, Logan Moore). Opportunity: BTP leads are closing at 48% but only represent 12% of volume. Increasing BTP allocation by 20% could add ~$18,400/month in revenue.";

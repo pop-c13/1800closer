@@ -12,6 +12,8 @@ import SlideRenderer from './SlideRenderer';
 import CallTimer from './CallTimer';
 import WhisperToast from './WhisperToast';
 import SessionSummary from './SessionSummary';
+import DispositionModal from './DispositionModal';
+import PostCallScorecard from './PostCallScorecard';
 import slides from '../data/slides';
 import { getIndustryContent } from '../data/industryContent';
 import { createAudioResponder } from '../lib/audioStream';
@@ -209,6 +211,8 @@ export default function PresenterPanel() {
   const [customQuestion, setCustomQuestion] = useState('');
   const [showBackConfirm, setShowBackConfirm] = useState(false);
   const [collapsedCategories, setCollapsedCategories] = useState({});
+  const [showScorecard, setShowScorecard] = useState(false);
+  const [scorecardData, setScorecardData] = useState(null);
 
   const scriptAreaRef = useRef(null);
   const slideNoteRef = useRef(null);
@@ -378,6 +382,56 @@ Provide a concise, actionable answer.`;
     setCoachResponse(response);
     setCoachLoading(false);
   }, [customQuestion, lead, visibleSlides, currentSlideIndex, calculator, computedSavings]);
+
+  // ── Calculate flow score ─────────────────────────────────────────────────
+  const calculateFlowScore = () => {
+    const discoveryPct = Object.values(discoveryAnswers).filter(v => v && v !== '').length / 9;
+    const slidesPct = sessionData.slidesShown.length / Math.max(visibleSlides.length, 1);
+    const usedCalc = computedSavings.annualSavings > 0 ? 1 : 0;
+    const pacingOk = callDuration <= 1800 ? 1 : callDuration <= 1980 ? 0.5 : 0;
+    return Math.round(((discoveryPct * 0.3) + (slidesPct * 0.3) + (usedCalc * 0.2) + (pacingOk * 0.2)) * 100);
+  };
+
+  // ── Disposition submit handler ──────────────────────────────────────────
+  const handleDispositionSubmit = (data) => {
+    // Build scorecard data from session
+    const scData = {
+      leadName: lead ? `${lead.firstName} ${lead.lastName}` : '',
+      businessName: lead?.businessName || '',
+      duration: callDuration,
+      outcome: data.disposition,
+      disposition: data.disposition,
+      products: data.products || [],
+      totalSale: data.totalSale || 0,
+      firstPaymentAmount: data.firstPaymentAmount || 0,
+      paymentMethod: data.paymentMethod || '',
+      discoveryAnswered: Object.values(discoveryAnswers).filter(v => v && v !== '').length,
+      objectionsHandled: sessionData.objectionsClicked.length,
+      coachTipsUsed: sessionData.coachTips?.length || 0,
+      savingsPresented: computedSavings.annualSavings,
+      priceQuoted: data.totalSale || parseFloat(pricing.annualPrice) || 0,
+      totalSlides: visibleSlides.length,
+      slidesPresented: sessionData.slidesShown.length,
+      flowScore: calculateFlowScore(),
+      callNotes: sessionData.quickNotes || '',
+      computedSavings,
+      notInterestedReason: data.reason || null,
+      followUpDate: data.followUpDate || null,
+      followUpTemp: data.followUpTemp || null,
+    };
+    setScorecardData(scData);
+
+    // Call confirmOutcome with enhanced data
+    confirmOutcome(data.disposition, data);
+    setShowScorecard(true);
+  };
+
+  // ── Scorecard done handler ──────────────────────────────────────────────
+  const handleScorecardDone = () => {
+    setShowScorecard(false);
+    setScorecardData(null);
+    navigate('/');
+  };
 
   // ── Early return if no lead ───────────────────────────────────────────────
   if (!lead) return null;
@@ -1212,48 +1266,22 @@ Provide a concise, actionable answer.`;
 
       {/* ─── FLOATING OVERLAYS ───────────────────────────────────────────── */}
 
-      {/* ─── OUTCOME SELECTOR ──────────────────────────────────────────── */}
-      <AnimatePresence>
-        {showOutcomeSelector && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              className="bg-[#18181f] border border-white/10 rounded-2xl p-8 max-w-md w-full text-center"
-            >
-              <h2 className="text-2xl font-bold text-white mb-2">How did it go?</h2>
-              <p className="text-white/40 text-sm mb-8">Select the call outcome before generating the summary.</p>
+      {/* ─── DISPOSITION MODAL (replaces old outcome selector) ────────── */}
+      <DispositionModal
+        show={showOutcomeSelector}
+        leadData={lead}
+        callDuration={callDuration}
+        pricing={pricing}
+        computedSavings={computedSavings}
+        onSubmit={handleDispositionSubmit}
+      />
 
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <button
-                  onClick={() => confirmOutcome('closed')}
-                  className="flex items-center justify-center gap-2 py-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 font-semibold text-sm hover:bg-green-500/20 transition-all active:scale-95"
-                >
-                  <span className="text-lg">✅</span> Closed
-                </button>
-                <button
-                  onClick={() => confirmOutcome('follow-up')}
-                  className="flex items-center justify-center gap-2 py-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 font-semibold text-sm hover:bg-yellow-500/20 transition-all active:scale-95"
-                >
-                  <span className="text-lg">🔄</span> Follow-up
-                </button>
-              </div>
-              <button
-                onClick={() => confirmOutcome('no-sale')}
-                className="w-full flex items-center justify-center gap-2 py-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 font-semibold text-sm hover:bg-red-500/20 transition-all active:scale-95"
-              >
-                <span className="text-lg">❌</span> No Sale
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* ─── POST-CALL SCORECARD ─────────────────────────────────────── */}
+      <PostCallScorecard
+        show={showScorecard}
+        sessionData={scorecardData}
+        onDone={handleScorecardDone}
+      />
 
       {/* ─── SESSION SAVE STATUS ───────────────────────────────────────── */}
       <AnimatePresence>

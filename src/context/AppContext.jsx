@@ -326,7 +326,7 @@ export function AppProvider({ children }) {
     }
   }, []);
 
-  const confirmOutcome = useCallback(async (outcome) => {
+  const confirmOutcome = useCallback(async (outcome, dispositionData = {}) => {
     setCallOutcome(outcome);
     setShowOutcomeSelector(false);
     setShowSummary(true);
@@ -367,6 +367,17 @@ export function AppProvider({ children }) {
       deck_type: deckType,
       ai_coach_tips_count: sessionData.coachTips?.length || 0,
       whispers_received: sessionData.whisperMessages?.length || 0,
+      // New disposition fields
+      products: dispositionData.products || null,
+      total_sale: dispositionData.totalSale || null,
+      first_payment_amount: dispositionData.firstPaymentAmount || null,
+      payment_method_detail: dispositionData.paymentMethod || null,
+      progress_meeting: dispositionData.progressMeeting || null,
+      follow_up_date: dispositionData.followUpDate || null,
+      follow_up_reason: dispositionData.followUpReason || null,
+      follow_up_temp: dispositionData.followUpTemp || null,
+      not_interested_reason: dispositionData.reason || null,
+      disposition_notes: dispositionData.notes || null,
     };
 
     const result = await saveSession(sessionRecord);

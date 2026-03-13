@@ -6,6 +6,7 @@ import ViewerView from './components/ViewerView';
 import ManagerHub from './components/ManagerHub';
 import ManagerLiveView from './components/ManagerLiveView';
 import RepDetailView from './components/RepDetailView';
+import ExecutiveCommandCenter from './components/ExecutiveCommandCenter';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
             <Route path="/manager" element={<ManagerHub />} />
             <Route path="/manager/live/:id" element={<ManagerLiveView />} />
             <Route path="/manager/rep/:repId" element={<RepDetailView />} />
+            <Route path="/executive" element={<ExecutiveCommandCenter />} />
           </Routes>
         </div>
       </BrowserRouter>
