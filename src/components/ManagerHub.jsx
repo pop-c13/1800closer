@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -6,6 +6,9 @@ import {
   Clock, AlertTriangle, BarChart3, ArrowUpRight, ChevronRight
 } from 'lucide-react';
 import { mockActiveSessions, mockRecentSessions, mockTeamPerformance, topObjections, teamMembers } from '../data/sampleData';
+import { subscribeToActiveSessions } from '../lib/realtimeSync';
+import { isSupabaseConfigured } from '../lib/supabase';
+import { getRecentSessions, getTodayTeamStats } from '../lib/sessionDB';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -58,11 +61,61 @@ export default function ManagerHub() {
   const [whisperText, setWhisperText] = useState('');
   const [sortCol, setSortCol] = useState('name');
   const [sortDir, setSortDir] = useState('asc');
+  const [liveSessions, setLiveSessions] = useState(null); // null = not yet loaded, [] = no sessions
+  const [dbRecentSessions, setDbRecentSessions] = useState(null);
+  const [dbTeamStats, setDbTeamStats] = useState(null);
 
-  const liveCount = mockActiveSessions.filter(s => s.status === 'live').length;
+  useEffect(() => {
+    async function fetchData() {
+      const [recent, stats] = await Promise.all([
+        getRecentSessions(null, 8),
+        getTodayTeamStats(),
+      ]);
+      if (recent && recent.length > 0) setDbRecentSessions(recent);
+      if (stats) setDbTeamStats(stats);
+    }
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+
+    const subscription = subscribeToActiveSessions((sessions) => {
+      setLiveSessions(sessions);
+    });
+
+    return () => {
+      if (subscription) subscription.unsubscribe();
+    };
+  }, []);
+
+  // Use real sessions if Supabase is configured and we have data, otherwise mock
+  const activeSessions = (liveSessions !== null && liveSessions.length > 0)
+    ? liveSessions.map(s => ({
+        id: s.sessionId || s.repId,
+        repId: s.repId,
+        repName: s.repName,
+        status: 'live',
+        leadName: s.leadName || 'Unknown Lead',
+        businessName: s.businessName || '',
+        state: s.state || '',
+        leadSource: s.leadSource || '',
+        currentSlide: s.currentSlide || 0,
+        totalSlides: s.totalSlides || 35,
+        slideTitle: s.slideTitle || '',
+        duration: s.callDuration || 0,
+        computedSavings: s.computedSavings || 0,
+        objectionsHandled: s.objectionsCount || 0,
+        discoveryProgress: parseInt(s.discoveryProgress) || 0,
+        discoveryTotal: 9,
+        priceQuoted: null,
+      }))
+    : mockActiveSessions;
+
+  const liveCount = activeSessions.filter(s => s.status === 'live').length;
 
   // ---- Critical pacing sessions ----
-  const criticalSessions = mockActiveSessions.filter(s => {
+  const criticalSessions = activeSessions.filter(s => {
     const slideProgress = s.currentSlide / s.totalSlides;
     return slideProgress < 0.5 && s.duration > 1200;
   });
@@ -97,6 +150,20 @@ export default function ManagerHub() {
     }
   };
 
+  const displayRecentSessions = dbRecentSessions
+    ? dbRecentSessions.map(s => ({
+        id: s.id,
+        repName: s.rep_name,
+        leadName: `${s.lead_first_name || ''} ${s.lead_last_name || ''}`.trim() || 'Unknown',
+        businessName: s.business_name || '',
+        duration: s.duration_seconds || 0,
+        priceQuoted: s.price_quoted ? parseFloat(s.price_quoted) : 0,
+        objections: (s.objections_handled || []).length,
+        outcome: s.outcome || 'no-sale',
+        date: s.created_at?.split('T')[0] || '',
+      }))
+    : mockRecentSessions;
+
   // ---- Render ----
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#0f0f13' }}>
@@ -125,6 +192,9 @@ export default function ManagerHub() {
             </span>
             <span className="text-white text-sm font-semibold">{liveCount} Live</span>
           </div>
+          {isSupabaseConfigured() && liveSessions !== null && (
+            <span className="text-[10px] text-green-400/60 font-medium tracking-wider">REALTIME</span>
+          )}
         </div>
       </header>
 
@@ -158,7 +228,7 @@ export default function ManagerHub() {
               <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
             </span>
             <h2 className="text-white text-lg font-bold tracking-tight">LIVE NOW</h2>
-            <span className="text-white/40 text-sm">{mockActiveSessions.length} sessions</span>
+            <span className="text-white/40 text-sm">{activeSessions.length} sessions</span>
           </div>
 
           <motion.div
@@ -167,7 +237,7 @@ export default function ManagerHub() {
             animate="show"
             className="grid grid-cols-1 lg:grid-cols-2 gap-4"
           >
-            {mockActiveSessions.map(session => {
+            {activeSessions.map(session => {
               const progress = session.totalSlides > 0
                 ? Math.round((session.currentSlide / session.totalSlides) * 100)
                 : 0;
@@ -320,10 +390,10 @@ export default function ManagerHub() {
             className="grid grid-cols-2 lg:grid-cols-4 gap-4"
           >
             {[
-              { label: 'Total Calls', value: '12', icon: Phone, color: '#3B82F6', bg: 'bg-blue-500/15' },
-              { label: 'Deals Closed', value: '5', icon: DollarSign, color: '#22C55E', bg: 'bg-green-500/15' },
-              { label: 'Revenue Booked', value: '$13,695', icon: TrendingUp, color: '#F47920', bg: 'bg-orange-500/15' },
-              { label: 'Team Close Rate', value: '58%', icon: BarChart3, color: '#A855F7', bg: 'bg-purple-500/15' },
+              { label: 'Total Calls', value: dbTeamStats ? String(dbTeamStats.totalCalls) : '12', icon: Phone, color: '#3B82F6', bg: 'bg-blue-500/15' },
+              { label: 'Deals Closed', value: dbTeamStats ? String(dbTeamStats.closedToday) : '5', icon: DollarSign, color: '#22C55E', bg: 'bg-green-500/15' },
+              { label: 'Revenue Booked', value: dbTeamStats ? `$${dbTeamStats.revenueBooked.toLocaleString()}` : '$13,695', icon: TrendingUp, color: '#F47920', bg: 'bg-orange-500/15' },
+              { label: 'Team Close Rate', value: dbTeamStats ? `${dbTeamStats.closeRate}%` : '58%', icon: BarChart3, color: '#A855F7', bg: 'bg-purple-500/15' },
             ].map((stat) => (
               <motion.div
                 key={stat.label}
@@ -357,7 +427,7 @@ export default function ManagerHub() {
               <div className="col-span-2 text-right">Action</div>
             </div>
 
-            {mockRecentSessions.map((session, idx) => {
+            {displayRecentSessions.map((session, idx) => {
               const badge = outcomeBadge[session.outcome] || outcomeBadge['no-sale'];
               return (
                 <motion.div
@@ -366,7 +436,7 @@ export default function ManagerHub() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: idx * 0.04, duration: 0.3 }}
                   className={`grid grid-cols-1 md:grid-cols-12 gap-2 px-5 py-4 items-center ${
-                    idx < mockRecentSessions.length - 1 ? 'border-b border-white/5' : ''
+                    idx < displayRecentSessions.length - 1 ? 'border-b border-white/5' : ''
                   } hover:bg-white/[0.02] transition-colors`}
                 >
                   {/* Session info */}

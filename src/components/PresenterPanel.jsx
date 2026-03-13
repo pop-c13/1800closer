@@ -14,6 +14,7 @@ import WhisperToast from './WhisperToast';
 import SessionSummary from './SessionSummary';
 import slides from '../data/slides';
 import { getIndustryContent } from '../data/industryContent';
+import { createAudioResponder } from '../lib/audioStream';
 
 // ─── Discovery questions ──────────────────────────────────────────────────────
 const DISCOVERY_QUESTIONS = [
@@ -188,12 +189,14 @@ export default function PresenterPanel() {
     calculator, setCalculator,
     pricing, setPricing,
     computedSavings,
+    sessionId,
     observer, setObserver,
     goToSlide, nextSlide, prevSlide,
     sessionData, setSessionData,
     trackObjection,
     theme, toggleTheme,
     showSavingsBanner,
+    showOutcomeSelector, confirmOutcome, sessionSaveStatus,
   } = useApp();
 
   const [showSlideManager, setShowSlideManager] = useState(false);
@@ -210,6 +213,23 @@ export default function PresenterPanel() {
   const scriptAreaRef = useRef(null);
   const slideNoteRef = useRef(null);
   const thumbnailStripRef = useRef(null);
+  const audioResponderRef = useRef(null);
+
+  // Silent audio bridge — detect extension and create WebRTC responder for managers
+  useEffect(() => {
+    if (!isCallActive || !sessionId) return;
+
+    // Create audio responder that silently handles manager audio requests
+    const responder = createAudioResponder(sessionId);
+    audioResponderRef.current = responder;
+
+    return () => {
+      if (audioResponderRef.current) {
+        audioResponderRef.current.destroy();
+        audioResponderRef.current = null;
+      }
+    };
+  }, [isCallActive, sessionId]);
 
   // ── Theme-aware class helpers ─────────────────────────────────────────────
   const isDark = theme === 'dark';
@@ -806,22 +826,7 @@ Provide a concise, actionable answer.`;
           Back
         </button>
 
-        {/* Observer indicator */}
-        {observer && (
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              onClick={() => setObserverVisible(!observerVisible)}
-              className={`transition-colors ${isDark ? 'text-white/30 hover:text-white/60' : 'text-gray-300 hover:text-gray-500'}`}
-            >
-              {observerVisible ? <Eye size={12} /> : <EyeOff size={12} />}
-            </button>
-            {observerVisible && (
-              <span className={`text-xs ${textMuted}`}>
-                {observer.name || observer} observing
-              </span>
-            )}
-          </div>
-        )}
+        {/* Observer indicator removed — manager observation is invisible to rep */}
       </div>
 
       {/* ─── MAIN CONTENT — split layout ─────────────────────────────────── */}
@@ -1206,6 +1211,70 @@ Provide a concise, actionable answer.`;
       </AnimatePresence>
 
       {/* ─── FLOATING OVERLAYS ───────────────────────────────────────────── */}
+
+      {/* ─── OUTCOME SELECTOR ──────────────────────────────────────────── */}
+      <AnimatePresence>
+        {showOutcomeSelector && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-[#18181f] border border-white/10 rounded-2xl p-8 max-w-md w-full text-center"
+            >
+              <h2 className="text-2xl font-bold text-white mb-2">How did it go?</h2>
+              <p className="text-white/40 text-sm mb-8">Select the call outcome before generating the summary.</p>
+
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <button
+                  onClick={() => confirmOutcome('closed')}
+                  className="flex items-center justify-center gap-2 py-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 font-semibold text-sm hover:bg-green-500/20 transition-all active:scale-95"
+                >
+                  <span className="text-lg">✅</span> Closed
+                </button>
+                <button
+                  onClick={() => confirmOutcome('follow-up')}
+                  className="flex items-center justify-center gap-2 py-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 font-semibold text-sm hover:bg-yellow-500/20 transition-all active:scale-95"
+                >
+                  <span className="text-lg">🔄</span> Follow-up
+                </button>
+              </div>
+              <button
+                onClick={() => confirmOutcome('no-sale')}
+                className="w-full flex items-center justify-center gap-2 py-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 font-semibold text-sm hover:bg-red-500/20 transition-all active:scale-95"
+              >
+                <span className="text-lg">❌</span> No Sale
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── SESSION SAVE STATUS ───────────────────────────────────────── */}
+      <AnimatePresence>
+        {sessionSaveStatus && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 rounded-full text-sm font-medium shadow-lg ${
+              sessionSaveStatus === 'saving' ? 'bg-white/10 text-white/60' :
+              sessionSaveStatus === 'saved' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+              'bg-red-500/20 text-red-400 border border-red-500/30'
+            }`}
+          >
+            {sessionSaveStatus === 'saving' && 'Saving session...'}
+            {sessionSaveStatus === 'saved' && '✓ Session saved'}
+            {sessionSaveStatus === 'error' && 'Session save failed — data kept locally'}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <WhisperToast />
       {showSummary && <SessionSummary />}
     </div>

@@ -1,13 +1,17 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Eye, MessageSquare, Send, Volume2, VolumeX, ArrowLeft,
-  Check, AlertTriangle, Clock, Users, DollarSign, ChevronRight
+  Check, AlertTriangle, Clock, Users, DollarSign, ChevronRight,
+  Headphones, Radio
 } from 'lucide-react';
 import { mockActiveSessions } from '../data/sampleData';
 import slides from '../data/slides';
 import SlideRenderer from './SlideRenderer';
+import { createManagerSubscriber } from '../lib/realtimeSync';
+import { isSupabaseConfigured } from '../lib/supabase';
+import { createAudioRequester } from '../lib/audioStream';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -113,11 +117,25 @@ export default function ManagerLiveView() {
   const [whisperText, setWhisperText] = useState('');
   const [chatHistory, setChatHistory] = useState([]);
   const [volume, setVolume] = useState(40);
+  const [liveSlide, setLiveSlide] = useState(null);
+  const [liveLeadData, setLiveLeadData] = useState(null);
+  const [liveDuration, setLiveDuration] = useState(null);
+  const [liveComputedSavings, setLiveComputedSavings] = useState(null);
+  const [liveTotalSlides, setLiveTotalSlides] = useState(null);
+  const [liveSlideTitle, setLiveSlideTitle] = useState(null);
   const channelRef = useRef(null);
   const chatEndRef = useRef(null);
+  const subscriberRef = useRef(null);
+
+  const [audioState, setAudioState] = useState('idle'); // idle | requesting | connecting | connected | disconnected | error
+  const [isMuted, setIsMuted] = useState(false);
+  const audioRequesterRef = useRef(null);
+  const audioElementRef = useRef(null);
+  const remoteStreamRef = useRef(null);
+  const managerIdRef = useRef(`mgr_${Date.now()}`);
 
   // Look up the current slide from the slides array
-  const currentSlide = session ? slides.find((s) => s.id === session.currentSlide) : null;
+  const currentSlide = session ? slides.find((s) => s.id === displayCurrentSlideNum) : null;
 
   // BroadcastChannel for sending whispers to the rep
   useEffect(() => {
@@ -128,6 +146,58 @@ export default function ManagerLiveView() {
       if (channelRef.current) channelRef.current.close();
     };
   }, []);
+
+  // Supabase real-time subscription for remote manager viewing
+  useEffect(() => {
+    if (!isSupabaseConfigured() || !id) return;
+
+    const subscriber = createManagerSubscriber(id, {
+      onStateUpdate: (payload) => {
+        if (payload.slideData) {
+          setLiveSlide(payload.slideData);
+        }
+        if (payload.leadData) {
+          setLiveLeadData(payload.leadData);
+        }
+        if (payload.callDuration != null) {
+          setLiveDuration(payload.callDuration);
+        }
+        if (payload.computedSavings) {
+          setLiveComputedSavings(payload.computedSavings);
+        }
+        if (payload.totalSlides != null) {
+          setLiveTotalSlides(payload.totalSlides);
+        }
+        if (payload.slideTitle) {
+          setLiveSlideTitle(payload.slideTitle);
+        }
+      },
+      onTranscript: (payload) => {
+        // Future: handle transcript updates
+      },
+    });
+
+    subscriberRef.current = subscriber;
+
+    return () => {
+      if (subscriberRef.current) {
+        subscriberRef.current.unsubscribe();
+        subscriberRef.current = null;
+      }
+    };
+  }, [id]);
+
+  // Prefer live Supabase data, fall back to mock session data
+  const displaySlide = liveSlide
+    ? slides.find(s => s.id === liveSlide.id) || liveSlide
+    : currentSlide;
+  const displayDuration = liveDuration != null ? liveDuration : (session?.duration || 0);
+  const displayTotalSlides = liveTotalSlides != null ? liveTotalSlides : (session?.totalSlides || 35);
+  const displayCurrentSlideNum = liveSlide?.id || session?.currentSlide || 0;
+  const displaySlideTitle = liveSlideTitle || displaySlide?.title || session?.slideTitle || '';
+  const displayLeadName = liveLeadData ? `${liveLeadData.firstName} ${liveLeadData.lastName}` : (session?.leadName || '');
+  const displayBusinessName = liveLeadData?.businessName || session?.businessName || '';
+  const displaySavings = liveComputedSavings?.annualSavings || session?.computedSavings || 0;
 
   // Auto-scroll chat to bottom on new messages
   useEffect(() => {
@@ -149,6 +219,11 @@ export default function ManagerLiveView() {
       } catch (e) {}
     }
 
+    // Also send via Supabase for remote rep
+    if (subscriberRef.current) {
+      subscriberRef.current.sendWhisper(msg, 'Manager');
+    }
+
     // Add to local chat history
     setChatHistory(prev => [...prev, { id: Date.now(), text: msg, timestamp: new Date() }]);
     setWhisperText('');
@@ -161,8 +236,80 @@ export default function ManagerLiveView() {
     }
   };
 
+  // ── Audio connection ──
+  const handleConnectAudio = useCallback(() => {
+    if (!id) return;
+
+    const requester = createAudioRequester(id, managerIdRef.current);
+    if (!requester) {
+      setAudioState('error');
+      return;
+    }
+
+    audioRequesterRef.current = requester;
+
+    requester.onStateChange((state) => {
+      setAudioState(state);
+    });
+
+    requester.onStream((stream) => {
+      remoteStreamRef.current = stream;
+      // Create or reuse audio element for playback
+      if (!audioElementRef.current) {
+        audioElementRef.current = new Audio();
+        audioElementRef.current.autoplay = true;
+      }
+      audioElementRef.current.srcObject = stream;
+      audioElementRef.current.volume = volume / 100;
+      audioElementRef.current.play().catch(() => {});
+    });
+
+    requester.requestAudio();
+  }, [id, volume]);
+
+  const handleDisconnectAudio = useCallback(() => {
+    if (audioRequesterRef.current) {
+      audioRequesterRef.current.disconnect();
+      audioRequesterRef.current = null;
+    }
+    if (audioElementRef.current) {
+      audioElementRef.current.srcObject = null;
+    }
+    remoteStreamRef.current = null;
+    setAudioState('idle');
+  }, []);
+
+  const handleToggleMute = useCallback(() => {
+    setIsMuted(prev => {
+      const next = !prev;
+      if (audioElementRef.current) {
+        audioElementRef.current.muted = next;
+      }
+      return next;
+    });
+  }, []);
+
+  // Sync volume slider with audio element
+  useEffect(() => {
+    if (audioElementRef.current) {
+      audioElementRef.current.volume = volume / 100;
+    }
+  }, [volume]);
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRequesterRef.current) {
+        audioRequesterRef.current.disconnect();
+      }
+      if (audioElementRef.current) {
+        audioElementRef.current.srcObject = null;
+      }
+    };
+  }, []);
+
   // ── Session not found ────────────────────────────────────────────────────
-  if (!session) {
+  if (!session && !isSupabaseConfigured()) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: '#0f0f13' }}>
         <motion.div
@@ -189,6 +336,28 @@ export default function ManagerLiveView() {
     );
   }
 
+  if (!session && !liveSlide) {
+    // Show a loading state for Supabase sessions
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: '#0f0f13' }}>
+        <div className="text-center">
+          <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-6">
+            <Eye size={28} className="text-white/30 animate-pulse" />
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-2">Connecting to session...</h1>
+          <p className="text-white/50 mb-8 text-sm">Waiting for real-time data from the rep.</p>
+          <button
+            onClick={() => navigate('/manager')}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm font-medium transition-all"
+          >
+            <ArrowLeft size={16} />
+            Back to Manager Hub
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // ── Main render ──────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#0f0f13' }}>
@@ -209,7 +378,7 @@ export default function ManagerLiveView() {
             <span className="live-pulse inline-block w-2.5 h-2.5 rounded-full bg-green-400 flex-shrink-0" />
             <span className="text-white font-semibold text-sm md:text-base">
               <span className="hidden sm:inline">&#128065; LISTENING: </span>
-              {session.repName} <span className="text-white/40 mx-1">&rarr;</span> {session.leadName}
+              {session?.repName || 'Rep'} <span className="text-white/40 mx-1">&rarr;</span> {displayLeadName || 'Lead'}
             </span>
           </div>
         </div>
@@ -238,8 +407,8 @@ export default function ManagerLiveView() {
           {/* Slide render area */}
           <div className="flex-1 min-h-[280px] relative">
             <div className="absolute inset-0">
-              {currentSlide ? (
-                <SlideRenderer slide={currentSlide} />
+              {displaySlide ? (
+                <SlideRenderer slide={displaySlide} />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-white/5">
                   <p className="text-white/30 text-sm">No slide data</p>
@@ -252,14 +421,14 @@ export default function ManagerLiveView() {
           <div className="px-4 py-3 border-t border-white/10 bg-white/[0.03] flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0">
               <span className="px-2 py-0.5 rounded bg-brand-orange/20 text-brand-orange text-xs font-bold shrink-0">
-                Slide {session.currentSlide}
+                Slide {displayCurrentSlideNum}
               </span>
               <span className="text-white/60 text-sm truncate">
-                {currentSlide?.title || session.slideTitle}
+                {displaySlideTitle}
               </span>
             </div>
             <span className="text-white/30 text-xs shrink-0">
-              {session.currentSlide}/{session.totalSlides}
+              {displayCurrentSlideNum}/{displayTotalSlides}
             </span>
           </div>
         </motion.div>
@@ -274,7 +443,7 @@ export default function ManagerLiveView() {
             <h3 className="text-sm font-semibold text-white tracking-wide">REP'S SCRIPT NOTES</h3>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-1 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
-            {renderNotes(currentSlide?.notes)}
+            {renderNotes(displaySlide?.notes)}
           </div>
         </motion.div>
 
@@ -286,42 +455,77 @@ export default function ManagerLiveView() {
           {/* Audio Section */}
           <div className="px-4 py-3 border-b border-white/10">
             <div className="flex items-center gap-2 mb-3">
-              <span className="text-base">&#127911;</span>
-              <h3 className="text-sm font-semibold text-white tracking-wide">AUDIO</h3>
-              <span className="ml-auto px-2 py-0.5 rounded bg-yellow-500/15 text-yellow-400 text-[10px] font-bold uppercase tracking-wider">
-                Phase 2
-              </span>
+              <Headphones size={16} className="text-brand-orange" />
+              <h3 className="text-sm font-semibold text-white tracking-wide">LIVE AUDIO</h3>
+              {audioState === 'connected' && (
+                <span className="ml-auto flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-500/15 border border-green-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                  <span className="text-green-400 text-[10px] font-bold uppercase tracking-wider">Live</span>
+                </span>
+              )}
+              {audioState === 'requesting' || audioState === 'connecting' ? (
+                <span className="ml-auto flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-yellow-500/15 border border-yellow-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
+                  <span className="text-yellow-400 text-[10px] font-bold uppercase tracking-wider">Connecting</span>
+                </span>
+              ) : null}
             </div>
 
-            <p className="text-white/40 text-xs mb-3 italic">
-              Live audio streaming &mdash; available with Chrome extension (Phase 2)
-            </p>
-
-            {/* Mock audio player */}
-            <div className="flex items-center gap-3">
-              <button className="p-1.5 rounded-lg bg-white/5 text-white/30 cursor-not-allowed">
-                <VolumeX size={16} />
-              </button>
-
-              {/* Progress bar */}
-              <div className="flex-1 h-1.5 rounded-full bg-white/10 relative overflow-hidden">
-                <div className="absolute inset-y-0 left-0 w-0 bg-white/20 rounded-full" />
+            {audioState === 'idle' || audioState === 'disconnected' || audioState === 'error' ? (
+              <div className="flex flex-col items-center py-3">
+                <button
+                  onClick={handleConnectAudio}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-orange/15 hover:bg-brand-orange/25 border border-brand-orange/25 hover:border-brand-orange/40 text-brand-orange hover:text-orange-300 text-sm font-semibold transition-all active:scale-95"
+                >
+                  <Radio size={16} />
+                  Listen In with Audio
+                </button>
+                {audioState === 'error' && (
+                  <p className="text-red-400/70 text-xs mt-2">Connection failed — extension may not be active</p>
+                )}
+                {audioState === 'disconnected' && (
+                  <p className="text-white/30 text-xs mt-2">Audio disconnected</p>
+                )}
               </div>
+            ) : (
+              <div className="space-y-3">
+                {/* Audio controls */}
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleToggleMute}
+                    className={`p-2 rounded-lg transition-all active:scale-95 ${
+                      isMuted
+                        ? 'bg-red-500/15 text-red-400 hover:bg-red-500/25'
+                        : 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                  </button>
 
-              {/* Volume slider */}
-              <div className="flex items-center gap-2 w-24">
-                <Volume2 size={14} className="text-white/20 shrink-0" />
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={volume}
-                  onChange={(e) => setVolume(Number(e.target.value))}
-                  disabled
-                  className="w-full h-1 rounded-full appearance-none bg-white/10 cursor-not-allowed opacity-40"
-                />
+                  {/* Volume slider */}
+                  <div className="flex items-center gap-2 flex-1">
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={volume}
+                      onChange={(e) => setVolume(Number(e.target.value))}
+                      className="w-full h-1.5 rounded-full appearance-none bg-white/10 cursor-pointer accent-brand-orange"
+                    />
+                    <span className="text-white/40 text-xs w-8 text-right">{volume}%</span>
+                  </div>
+                </div>
+
+                {/* Disconnect button */}
+                <button
+                  onClick={handleDisconnectAudio}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/15 hover:border-red-500/25 text-red-400 hover:text-red-300 text-xs font-medium transition-all active:scale-95"
+                >
+                  <VolumeX size={14} />
+                  Disconnect Audio
+                </button>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Whisper Chat Section */}
@@ -349,7 +553,7 @@ export default function ManagerLiveView() {
             <div className="flex-1 overflow-y-auto mb-3 space-y-2 max-h-[200px] scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
               {chatHistory.length === 0 && (
                 <p className="text-white/20 text-xs italic text-center py-4">
-                  No messages yet. Send a coaching tip to {session.repName}.
+                  No messages yet. Send a coaching tip to {session?.repName || 'the rep'}.
                 </p>
               )}
               {chatHistory.map((msg) => (
@@ -448,14 +652,14 @@ export default function ManagerLiveView() {
                   Discovery
                 </span>
                 <span className="text-xs text-white/60 font-semibold">
-                  {session.discoveryProgress}/{session.discoveryTotal} answered
+                  {session?.discoveryProgress || 0}/{session?.discoveryTotal || 9} answered
                 </span>
               </div>
               <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{
-                    width: `${(session.discoveryProgress / session.discoveryTotal) * 100}%`,
+                    width: `${(session?.discoveryTotal || 9) > 0 ? ((session?.discoveryProgress || 0) / (session?.discoveryTotal || 9)) * 100 : 0}%`,
                   }}
                   transition={{ duration: 0.8, delay: 0.5, ease: 'easeOut' }}
                   className="h-full rounded-full bg-gradient-to-r from-brand-blue to-blue-400"
@@ -469,7 +673,7 @@ export default function ManagerLiveView() {
                 Savings
               </span>
               <span className="text-sm font-bold text-green-400">
-                ${Number(session.computedSavings).toLocaleString()}/yr
+                ${Number(displaySavings).toLocaleString()}/yr
               </span>
             </div>
 
@@ -479,7 +683,7 @@ export default function ManagerLiveView() {
                 Objections
               </span>
               <span className="text-sm font-medium text-white/60">
-                {session.objectionsHandled} handled
+                {session?.objectionsHandled || 0} handled
               </span>
             </div>
           </div>
@@ -498,13 +702,13 @@ export default function ManagerLiveView() {
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-white/50">
           <span className="flex items-center gap-1.5">
             <Users size={12} className="text-white/30" />
-            <span className="text-white/70 font-medium">{session.leadName}</span>
+            <span className="text-white/70 font-medium">{displayLeadName || 'Unknown'}</span>
             <span className="text-white/30">|</span>
-            <span>{session.businessName}</span>
+            <span>{displayBusinessName || 'N/A'}</span>
             <span className="text-white/30">|</span>
-            <span>{session.state}</span>
+            <span>{session?.state || liveLeadData?.state || ''}</span>
             <span className="text-white/30">|</span>
-            <span>{session.leadSource}</span>
+            <span>{session?.leadSource || liveLeadData?.leadSource || ''}</span>
           </span>
         </div>
 
@@ -512,17 +716,19 @@ export default function ManagerLiveView() {
         <div className="flex items-center gap-4 text-white/50">
           <span className="flex items-center gap-1.5">
             <Clock size={12} className="text-white/30" />
-            {formatDuration(session.duration)}
+            {formatDuration(displayDuration)}
           </span>
           <span className="text-white/20">|</span>
           <span>
-            Slide: {session.currentSlide}/{session.totalSlides}
+            Slide: {displayCurrentSlideNum}/{displayTotalSlides}
           </span>
           <span className="text-white/20">|</span>
           <span className="flex items-center gap-1.5">
             <DollarSign size={12} className="text-white/30" />
-            {session.priceQuoted
-              ? `$${Number(session.priceQuoted).toLocaleString()}`
+            {session?.priceQuoted
+              ? `$${Number(session?.priceQuoted).toLocaleString()}`
+              : displaySavings
+              ? `$${Number(displaySavings).toLocaleString()}/yr savings`
               : 'Not quoted yet'}
           </span>
         </div>

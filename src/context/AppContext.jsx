@@ -1,4 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { createSessionBroadcaster, createPresenceTracker } from '../lib/realtimeSync';
+import { isSupabaseConfigured } from '../lib/supabase';
+import { saveSession } from '../lib/sessionDB';
 
 const AppContext = createContext();
 
@@ -54,6 +57,9 @@ export function AppProvider({ children }) {
   const [callStartTime, setCallStartTime] = useState(null);
   const [callDuration, setCallDuration] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
+  const [callOutcome, setCallOutcome] = useState(null); // 'closed' | 'follow-up' | 'no-sale' | null
+  const [showOutcomeSelector, setShowOutcomeSelector] = useState(false);
+  const [sessionSaveStatus, setSessionSaveStatus] = useState(null); // null | 'saving' | 'saved' | 'error'
 
   // Savings banner visibility — only show after personalized savings slide
   const [showSavingsBanner, setShowSavingsBanner] = useState(false);
@@ -119,6 +125,12 @@ export function AppProvider({ children }) {
   // Observer state
   const [observer, setObserver] = useState(null);
 
+  // Supabase real-time state
+  const [sessionId, setSessionId] = useState(null);
+  const broadcasterRef = useRef(null);
+  const presenceRef = useRef(null);
+  const presenceIntervalRef = useRef(null);
+
   // Slide timing tracking
   const slideTimerRef = useRef(null);
   const currentSlideStartRef = useRef(Date.now());
@@ -167,6 +179,39 @@ export function AppProvider({ children }) {
     }
   }, []);
 
+  // Calculate pacing status for presence
+  const calculatePacing = useCallback(() => {
+    if (!visibleSlides.length) return 'on_pace';
+    const slideProgress = currentSlideIndex / visibleSlides.length;
+    const timeProgress = callDuration / 1800;
+    if (slideProgress < 0.5 && callDuration > 1200) return 'critical';
+    if (slideProgress < timeProgress * 0.7) return 'behind';
+    return 'on_pace';
+  }, [currentSlideIndex, visibleSlides.length, callDuration]);
+
+  // Build the full state payload for Supabase broadcast
+  const buildBroadcastPayload = useCallback(() => {
+    const currentSlide = visibleSlides[currentSlideIndex];
+    const filledDiscovery = Object.values(discoveryAnswers).filter(v => v && v !== '').length;
+    return {
+      sessionId,
+      slideIndex: currentSlideIndex,
+      slideData: currentSlide,
+      slideTitle: currentSlide?.title || '',
+      totalSlides: visibleSlides.length,
+      leadData: lead,
+      taxCalc: calculator,
+      computedSavings,
+      pricing,
+      slideVisibility,
+      showSavingsBanner,
+      callDuration,
+      discoveryProgress: `${filledDiscovery}/9`,
+      objectionsCount: sessionData.objectionsClicked.length,
+      pacingStatus: calculatePacing(),
+    };
+  }, [sessionId, currentSlideIndex, visibleSlides, lead, calculator, computedSavings, pricing, slideVisibility, showSavingsBanner, callDuration, discoveryAnswers, sessionData.objectionsClicked.length, calculatePacing]);
+
   // Navigate slides
   const goToSlide = useCallback((index) => {
     if (index < 0 || index >= visibleSlides.length) return;
@@ -212,8 +257,13 @@ export function AppProvider({ children }) {
         pricing,
         showSavingsBanner: savingsSlideIdx !== -1 && index > savingsSlideIdx && targetSlide.id !== 41,
       });
+
+      // Also broadcast via Supabase for remote managers
+      if (broadcasterRef.current) {
+        broadcasterRef.current.broadcastState(buildBroadcastPayload());
+      }
     }
-  }, [visibleSlides, currentSlideIndex, lead, calculator, computedSavings, pricing, broadcastState]);
+  }, [visibleSlides, currentSlideIndex, lead, calculator, computedSavings, pricing, broadcastState, buildBroadcastPayload]);
 
   const nextSlide = useCallback(() => {
     goToSlide(currentSlideIndex + 1);
@@ -225,9 +275,12 @@ export function AppProvider({ children }) {
 
   // Start/end call
   const startCall = useCallback(() => {
+    const newSessionId = crypto.randomUUID();
+    setSessionId(newSessionId);
     setIsCallActive(true);
     setCallStartTime(Date.now());
     setCallDuration(0);
+    setShowSavingsBanner(false);
     setSessionData({
       slidesShown: [],
       slidesSkipped: [],
@@ -237,12 +290,96 @@ export function AppProvider({ children }) {
       whisperMessages: [],
       quickNotes: '',
     });
+
+    // Initialize Supabase broadcaster
+    if (isSupabaseConfigured()) {
+      const broadcaster = createSessionBroadcaster(newSessionId);
+      broadcasterRef.current = broadcaster;
+
+      // Listen for whispers from manager via Supabase
+      if (broadcaster) {
+        broadcaster.onWhisper((payload) => {
+          if (addWhisperRef.current) {
+            addWhisperRef.current(payload.message, payload.from || 'Manager');
+          }
+        });
+      }
+    }
   }, []);
 
   const endCall = useCallback(() => {
     setIsCallActive(false);
-    setShowSummary(true);
+    setShowOutcomeSelector(true); // Show outcome selector first
+
+    // Cleanup Supabase channels
+    if (broadcasterRef.current) {
+      broadcasterRef.current.unsubscribe();
+      broadcasterRef.current = null;
+    }
+    if (presenceRef.current) {
+      presenceRef.current.unsubscribe();
+      presenceRef.current = null;
+    }
+    if (presenceIntervalRef.current) {
+      clearInterval(presenceIntervalRef.current);
+      presenceIntervalRef.current = null;
+    }
   }, []);
+
+  const confirmOutcome = useCallback(async (outcome) => {
+    setCallOutcome(outcome);
+    setShowOutcomeSelector(false);
+    setShowSummary(true);
+    setSessionSaveStatus('saving');
+
+    // Build session record
+    const sessionRecord = {
+      session_id: sessionId || crypto.randomUUID(),
+      rep_id: repId,
+      rep_name: repName,
+      lead_first_name: lead?.firstName || '',
+      lead_last_name: lead?.lastName || '',
+      business_name: lead?.businessName || '',
+      lead_source: lead?.leadSource || '',
+      entity_type: lead?.entityType || '',
+      industry: lead?.industry || '',
+      state: lead?.state || '',
+      revenue_range: lead?.annualIncome || '',
+      started_at: callStartTime ? new Date(callStartTime).toISOString() : new Date().toISOString(),
+      ended_at: new Date().toISOString(),
+      duration_seconds: callDuration,
+      over_time: callDuration > 1800,
+      total_slides: visibleSlides.length,
+      slides_presented: sessionData.slidesShown.length,
+      slides_skipped: visibleSlides
+        .filter(s => !sessionData.slidesShown.includes(s.id))
+        .map(s => s.id),
+      slide_times: sessionData.slideTimings,
+      discovery_answers: discoveryAnswers,
+      tax_calc_inputs: { incomeAmount: calculator.incomeAmount, taxRate: calculator.taxRate, hasSpouse: calculator.hasSpouse, spouseIncome: calculator.spouseIncome },
+      computed_savings: computedSavings.annualSavings,
+      price_quoted: pricing.annualPrice || null,
+      payment_type: pricing.paymentType || null,
+      card_type: pricing.cardType || null,
+      objections_handled: sessionData.objectionsClicked,
+      call_notes: sessionData.quickNotes || '',
+      outcome,
+      deck_type: deckType,
+      ai_coach_tips_count: sessionData.coachTips?.length || 0,
+      whispers_received: sessionData.whisperMessages?.length || 0,
+    };
+
+    const result = await saveSession(sessionRecord);
+    if (result) {
+      setSessionSaveStatus('saved');
+    } else {
+      setSessionSaveStatus('error');
+    }
+
+    // Clear save status after 3 seconds
+    setTimeout(() => setSessionSaveStatus(null), 3000);
+    setSessionId(null);
+  }, [sessionId, repId, repName, lead, callStartTime, callDuration, visibleSlides, sessionData, discoveryAnswers, calculator, computedSavings, pricing, deckType]);
 
   // Whisper
   const addWhisper = useCallback((message, managerName) => {
@@ -293,6 +430,57 @@ export function AppProvider({ children }) {
     if (lead) broadcastFullState();
   }, [lead, calculator, computedSavings, pricing, showSavingsBanner]);
 
+  // Supabase presence tracking — update every 10 seconds while call is active
+  useEffect(() => {
+    if (!isCallActive || !sessionId || !isSupabaseConfigured()) return;
+
+    // Initialize presence tracker
+    if (!presenceRef.current && repId && repName) {
+      const tracker = createPresenceTracker(repId, repName, {
+        sessionId,
+        leadName: lead ? `${lead.firstName} ${lead.lastName}` : '',
+        businessName: lead?.businessName || '',
+        state: lead?.state || '',
+        leadSource: lead?.leadSource || '',
+        currentSlide: currentSlideIndex,
+        totalSlides: visibleSlides.length,
+        callDuration: 0,
+        computedSavings: computedSavings.annualSavings,
+        objectionsCount: 0,
+        pacingStatus: 'on_pace',
+      });
+      presenceRef.current = tracker;
+    }
+
+    // Update presence every 10 seconds
+    presenceIntervalRef.current = setInterval(() => {
+      if (presenceRef.current) {
+        const filledDiscovery = Object.values(discoveryAnswers).filter(v => v && v !== '').length;
+        presenceRef.current.updatePresence({
+          sessionId,
+          leadName: lead ? `${lead.firstName} ${lead.lastName}` : '',
+          businessName: lead?.businessName || '',
+          state: lead?.state || '',
+          leadSource: lead?.leadSource || '',
+          currentSlide: currentSlideIndex,
+          slideTitle: visibleSlides[currentSlideIndex]?.title || '',
+          totalSlides: visibleSlides.length,
+          callDuration,
+          computedSavings: computedSavings.annualSavings,
+          objectionsCount: sessionData.objectionsClicked.length,
+          discoveryProgress: `${filledDiscovery}/9`,
+          pacingStatus: calculatePacing(),
+        });
+      }
+    }, 10000);
+
+    return () => {
+      if (presenceIntervalRef.current) {
+        clearInterval(presenceIntervalRef.current);
+      }
+    };
+  }, [isCallActive, sessionId]);
+
   // Update lead with calculator sync
   const updateLead = useCallback((updates) => {
     setLead(prev => {
@@ -311,6 +499,7 @@ export function AppProvider({ children }) {
   }, []);
 
   const value = {
+    sessionId,
     role, setRole,
     repName, setRepName,
     repId, setRepId,
@@ -324,6 +513,10 @@ export function AppProvider({ children }) {
     isCallActive, callStartTime, callDuration,
     startCall, endCall,
     showSummary, setShowSummary,
+    callOutcome, setCallOutcome,
+    showOutcomeSelector, setShowOutcomeSelector,
+    sessionSaveStatus,
+    confirmOutcome,
     showSavingsBanner, setShowSavingsBanner,
     calculator, setCalculator,
     pricing, setPricing,
