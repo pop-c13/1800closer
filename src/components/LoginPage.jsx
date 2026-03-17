@@ -108,22 +108,22 @@ export default function LoginPage() {
               <select
                 value={selectedUserId}
                 onChange={e => setSelectedUserId(e.target.value)}
-                className="w-full appearance-none bg-white/[0.05] text-white border border-white/[0.1] rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#F47920]/40 focus:border-[#F47920]/50 transition-all cursor-pointer"
+                className="w-full appearance-none bg-[#1e1e2a] text-white border border-white/[0.1] rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#F47920]/40 focus:border-[#F47920]/50 transition-all cursor-pointer"
               >
-                <option value="" className="bg-[#14141c] text-white/50">Select a team member...</option>
-                <optgroup label="Sales Reps" className="bg-[#14141c]">
+                <option value="">Select a team member...</option>
+                <optgroup label="Sales Reps">
                   {allUsers.filter(u => u.role === 'rep').map(u => (
-                    <option key={u.id} value={u.id} className="bg-[#14141c]">{u.name}</option>
+                    <option key={u.id} value={u.id}>{u.name}</option>
                   ))}
                 </optgroup>
-                <optgroup label="Managers" className="bg-[#14141c]">
+                <optgroup label="Managers">
                   {allUsers.filter(u => u.role === 'manager').map(u => (
-                    <option key={u.id} value={u.id} className="bg-[#14141c]">{u.name}</option>
+                    <option key={u.id} value={u.id}>{u.name}</option>
                   ))}
                 </optgroup>
-                <optgroup label="Executives" className="bg-[#14141c]">
+                <optgroup label="Executives">
                   {allUsers.filter(u => u.role === 'executive').map(u => (
-                    <option key={u.id} value={u.id} className="bg-[#14141c]">{u.name} — {u.title}</option>
+                    <option key={u.id} value={u.id}>{u.name} — {u.title}</option>
                   ))}
                 </optgroup>
               </select>

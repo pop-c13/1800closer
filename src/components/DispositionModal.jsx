@@ -19,6 +19,7 @@ const NOT_INTERESTED_REASONS = [
 const PAYMENT_METHODS = ['Visa', 'Mastercard', 'Amex', 'Discover'];
 
 export const PRODUCT_CATALOG = [
+  { id: 'core', name: 'Core Accounting Package', defaultPrice: 2949 },
   { id: 'btp', name: 'Business Tax Preparation', defaultPrice: 999 },
   { id: 'ptp', name: 'Personal Tax Preparation', defaultPrice: 429 },
   { id: 'tax_advisory', name: 'Tax Advisory', defaultPrice: 2499 },
@@ -107,9 +108,13 @@ export default function DispositionModal({ show, leadData, callDuration, pricing
   }, [orderProducts]);
 
   const addProduct = (catalogId) => {
+    if (catalogId === '__alacarte__') {
+      setOrderProducts(prev => [...prev, { id: `alc_${Date.now()}`, name: '', price: '', terms: 'full', isAlaCarte: true }]);
+      return;
+    }
     const item = PRODUCT_CATALOG.find(p => p.id === catalogId);
     if (!item) return;
-    setOrderProducts(prev => [...prev, { id: item.id, name: item.name, price: item.defaultPrice, terms: 'full', locked: false }]);
+    setOrderProducts(prev => [...prev, { id: item.id, name: item.name, price: item.defaultPrice, terms: 'full' }]);
   };
 
   const removeProduct = (id) => {
@@ -251,25 +256,30 @@ export default function DispositionModal({ show, leadData, callDuration, pricing
                   <div key={product.id} className="p-3 rounded-xl border border-brand-orange/30 bg-brand-orange/5">
                     <div className="flex items-center gap-3">
                       <Check size={14} className="text-brand-orange shrink-0" />
-                      <span className="text-sm font-medium text-white flex-1">{product.name}</span>
-                      {product.locked ? (
-                        <span className="text-sm font-bold text-brand-orange">${parseFloat(product.price).toLocaleString()}</span>
+                      {product.isAlaCarte ? (
+                        <input
+                          type="text"
+                          value={product.name}
+                          onChange={(e) => updateProduct(product.id, 'name', e.target.value)}
+                          placeholder="Product name"
+                          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1 text-sm text-white outline-none focus:border-brand-orange/40 placeholder-white/20"
+                        />
                       ) : (
-                        <div className="flex items-center gap-1">
-                          <span className="text-white/30 text-sm">$</span>
-                          <input
-                            type="number"
-                            value={product.price}
-                            onChange={(e) => updateProduct(product.id, 'price', e.target.value)}
-                            className="w-24 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm text-white text-right outline-none focus:border-brand-orange/40"
-                          />
-                        </div>
+                        <span className="text-sm font-medium text-white flex-1">{product.name}</span>
                       )}
-                      {!product.locked && (
-                        <button onClick={() => removeProduct(product.id)} className="p-1 text-white/30 hover:text-red-400">
-                          <X size={14} />
-                        </button>
-                      )}
+                      <div className="flex items-center gap-1">
+                        <span className="text-white/30 text-sm">$</span>
+                        <input
+                          type="number"
+                          value={product.price}
+                          onChange={(e) => updateProduct(product.id, 'price', e.target.value)}
+                          placeholder="0"
+                          className="w-24 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm text-white text-right outline-none focus:border-brand-orange/40"
+                        />
+                      </div>
+                      <button onClick={() => removeProduct(product.id)} className="p-1 text-white/30 hover:text-red-400">
+                        <X size={14} />
+                      </button>
                     </div>
                     <PaymentTermButtons
                       price={product.price}
@@ -280,23 +290,22 @@ export default function DispositionModal({ show, leadData, callDuration, pricing
                 ))}
 
                 {/* Add Product dropdown */}
-                {availableAddons.length > 0 && (
-                  <div className="relative">
-                    <select
-                      value=""
-                      onChange={(e) => { if (e.target.value) addProduct(e.target.value); }}
-                      className="w-full appearance-none bg-white/5 border border-dashed border-white/15 rounded-xl px-4 py-3 text-sm text-white/50 outline-none focus:border-brand-orange/40 cursor-pointer hover:bg-white/[0.07] transition-colors"
-                    >
-                      <option value="" className="bg-[#1a1a22]">+ Add Product</option>
-                      {availableAddons.map(p => (
-                        <option key={p.id} value={p.id} className="bg-[#1a1a22] text-white">
-                          {p.name} — ${p.defaultPrice.toLocaleString()}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
-                  </div>
-                )}
+                <div className="relative">
+                  <select
+                    value=""
+                    onChange={(e) => { if (e.target.value) addProduct(e.target.value); }}
+                    className="w-full appearance-none bg-[#1e1e2a] border border-dashed border-white/15 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-brand-orange/40 cursor-pointer hover:bg-[#252535] transition-colors"
+                  >
+                    <option value="">+ Add Product</option>
+                    {availableAddons.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} — ${p.defaultPrice.toLocaleString()}
+                      </option>
+                    ))}
+                    <option value="__alacarte__">— À La Carte (custom item)</option>
+                  </select>
+                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+                </div>
 
                 {/* Order Summary */}
                 {orderProducts.length > 0 && (
@@ -331,7 +340,7 @@ export default function DispositionModal({ show, leadData, callDuration, pricing
                   <select
                     value={orderPaymentMethod}
                     onChange={(e) => setOrderPaymentMethod(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-brand-orange/40"
+                    className="w-full bg-[#1e1e2a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-brand-orange/40"
                   >
                     {PAYMENT_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
@@ -378,7 +387,7 @@ export default function DispositionModal({ show, leadData, callDuration, pricing
                     type="date"
                     value={followUpDate}
                     onChange={(e) => setFollowUpDate(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-brand-orange/40"
+                    className="w-full bg-[#1e1e2a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-brand-orange/40"
                   />
                 </div>
 

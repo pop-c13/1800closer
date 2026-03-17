@@ -247,7 +247,7 @@ export default function PresenterPanel() {
   const textMuted = isDark ? 'text-white/60' : 'text-gray-500';
   const textDim = isDark ? 'text-white/40' : 'text-gray-400';
   const cardBg = isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200';
-  const inputBg = isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900';
+  const inputBg = isDark ? 'bg-[#1e1e2a] border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900';
   const brandLabel = isDark ? 'text-white/60' : 'text-gray-400';
 
   // ── Redirect if no lead ───────────────────────────────────────────────────
@@ -749,6 +749,16 @@ Provide a concise, actionable answer.`;
     const totalFirst = orderProducts.reduce((s, p) => s + getFirst(p.price, p.terms), 0);
     const availableAddons = PRODUCT_CATALOG.filter(c => !orderProducts.some(o => o.id === c.id));
 
+    const handleAddProduct = (val) => {
+      if (!val) return;
+      if (val === '__alacarte__') {
+        setOrderProducts(prev => [...prev, { id: `alc_${Date.now()}`, name: '', price: '', terms: 'full', isAlaCarte: true }]);
+        return;
+      }
+      const item = PRODUCT_CATALOG.find(p => p.id === val);
+      if (item) setOrderProducts(prev => [...prev, { id: item.id, name: item.name, price: item.defaultPrice, terms: 'full' }]);
+    };
+
     return (
       <div className={`mt-4 p-3 rounded-xl border ${cardBg} space-y-2`}>
         <h3 className="text-xs font-bold text-brand-orange uppercase tracking-wider flex items-center gap-1.5">
@@ -759,28 +769,33 @@ Provide a concise, actionable answer.`;
         {orderProducts.map((product) => (
           <div key={product.id} className={`p-2 rounded-lg border ${isDark ? 'border-white/10 bg-white/[0.03]' : 'border-gray-200 bg-gray-50'}`}>
             <div className="flex items-center gap-2">
-              <span className={`text-xs font-medium flex-1 truncate ${text}`}>{product.name}</span>
-              {product.locked ? (
-                <span className="text-xs font-bold text-brand-orange">${parseFloat(product.price).toLocaleString()}</span>
+              {product.isAlaCarte ? (
+                <input
+                  type="text"
+                  value={product.name}
+                  onChange={(e) => setOrderProducts(prev => prev.map(p => p.id === product.id ? { ...p, name: e.target.value } : p))}
+                  placeholder="Item name"
+                  className={`flex-1 min-w-0 border rounded px-1.5 py-0.5 text-xs focus:outline-none focus:border-brand-orange/50 placeholder:opacity-30 ${inputBg}`}
+                />
               ) : (
-                <div className="flex items-center gap-0.5">
-                  <span className={`text-[10px] ${textDim}`}>$</span>
-                  <input
-                    type="number"
-                    value={product.price}
-                    onChange={(e) => setOrderProducts(prev => prev.map(p => p.id === product.id ? { ...p, price: e.target.value } : p))}
-                    className={`w-16 border rounded px-1.5 py-0.5 text-xs text-right focus:outline-none focus:border-brand-orange/50 ${inputBg}`}
-                  />
-                </div>
+                <span className={`text-xs font-medium flex-1 truncate ${text}`}>{product.name}</span>
               )}
-              {!product.locked && (
-                <button
-                  onClick={() => setOrderProducts(prev => prev.filter(p => p.id !== product.id))}
-                  className={`${textDim} hover:text-red-400`}
-                >
-                  <X size={12} />
-                </button>
-              )}
+              <div className="flex items-center gap-0.5">
+                <span className={`text-[10px] ${textDim}`}>$</span>
+                <input
+                  type="number"
+                  value={product.price}
+                  onChange={(e) => setOrderProducts(prev => prev.map(p => p.id === product.id ? { ...p, price: e.target.value } : p))}
+                  placeholder="0"
+                  className={`w-16 border rounded px-1.5 py-0.5 text-xs text-right focus:outline-none focus:border-brand-orange/50 ${inputBg}`}
+                />
+              </div>
+              <button
+                onClick={() => setOrderProducts(prev => prev.filter(p => p.id !== product.id))}
+                className={`${textDim} hover:text-red-400`}
+              >
+                <X size={12} />
+              </button>
             </div>
             <div className="flex gap-1 mt-1">
               {TERM_OPTIONS.map(opt => (
@@ -801,28 +816,25 @@ Provide a concise, actionable answer.`;
         ))}
 
         {/* Add product dropdown */}
-        {availableAddons.length > 0 && (
-          <select
-            value=""
-            onChange={(e) => {
-              if (!e.target.value) return;
-              const item = PRODUCT_CATALOG.find(p => p.id === e.target.value);
-              if (item) setOrderProducts(prev => [...prev, { id: item.id, name: item.name, price: item.defaultPrice, terms: 'full', locked: false }]);
-            }}
-            className={`w-full border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand-orange/50 ${inputBg} cursor-pointer`}
-          >
-            <option value="">+ Add Product</option>
-            {availableAddons.map(p => (
-              <option key={p.id} value={p.id}>{p.name} — ${p.defaultPrice.toLocaleString()}</option>
-            ))}
-          </select>
-        )}
+        <select
+          value=""
+          onChange={(e) => handleAddProduct(e.target.value)}
+          className={`w-full border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand-orange/50 ${inputBg} cursor-pointer`}
+        >
+          <option value="">+ Add Product</option>
+          {availableAddons.map(p => (
+            <option key={p.id} value={p.id}>{p.name} — ${p.defaultPrice.toLocaleString()}</option>
+          ))}
+          <option value="__alacarte__">— À La Carte (custom item)</option>
+        </select>
 
         {/* Totals */}
-        <div className={`flex items-center justify-between pt-1 border-t ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
-          <span className={`text-xs font-semibold ${text}`}>Total: ${totalSale.toLocaleString()}</span>
-          <span className="text-xs font-semibold text-brand-orange">First: ${totalFirst.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-        </div>
+        {orderProducts.length > 0 && (
+          <div className={`flex items-center justify-between pt-1 border-t ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+            <span className={`text-xs font-semibold ${text}`}>Total: ${totalSale.toLocaleString()}</span>
+            <span className="text-xs font-semibold text-brand-orange">First: ${totalFirst.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+          </div>
+        )}
       </div>
     );
   }

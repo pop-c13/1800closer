@@ -126,3 +126,14 @@ input[type='range']::-moz-range-thumb {
   font-weight: 900;
   letter-spacing: -0.02em;
 }
+
+/* Fix dropdown option rendering — browsers use light background for option menus */
+select option {
+  background-color: #1a1a2e;
+  color: #ffffff;
+}
+
+select optgroup {
+  background-color: #1a1a2e;
+  color: #ffffff;
+}

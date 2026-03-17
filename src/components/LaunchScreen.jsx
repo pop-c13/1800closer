@@ -303,10 +303,10 @@ export default function LaunchScreen() {
                 const rep = reps.find(r => r.id === e.target.value);
                 if (rep) setSelectedRep(rep);
               }}
-              className="hidden sm:block bg-white/5 text-white/70 border border-white/10 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-orange-500/50"
+              className="hidden sm:block bg-[#1e1e2a] text-white border border-white/10 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-orange-500/50"
             >
               {reps.map(r => (
-                <option key={r.id} value={r.id} className="bg-[#18181f]">
+                <option key={r.id} value={r.id} className="">
                   {r.name}
                 </option>
               ))}
@@ -375,10 +375,10 @@ export default function LaunchScreen() {
               const rep = reps.find(r => r.id === e.target.value);
               if (rep) setSelectedRep(rep);
             }}
-            className="w-full bg-white/5 text-white/70 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-orange-500/50"
+            className="w-full bg-[#1e1e2a] text-white border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-orange-500/50"
           >
             {reps.map(r => (
-              <option key={r.id} value={r.id} className="bg-[#18181f]">
+              <option key={r.id} value={r.id} className="">
                 {r.name}
               </option>
             ))}
@@ -670,10 +670,10 @@ function AppointmentCard({ appt, index, isLaunching, onToggleLaunch, deckOverrid
                   <select
                     value={deckOverride || rec.deck}
                     onChange={e => onDeckChange(e.target.value)}
-                    className="w-full bg-white/5 text-white border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-orange-500/50"
+                    className="w-full bg-[#1e1e2a] text-white border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-orange-500/50"
                   >
                     {deckTypes.map(dt => (
-                      <option key={dt.id} value={dt.id} className="bg-[#18181f]">
+                      <option key={dt.id} value={dt.id} className="">
                         {dt.label}{dt.id === rec.deck ? ' (AI Recommended)' : ''}
                       </option>
                     ))}
@@ -729,10 +729,10 @@ function FormSelect({ label, value, onChange, options }) {
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-full bg-white/5 text-white border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-orange-500/50"
+        className="w-full bg-[#1e1e2a] text-white border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-orange-500/50"
       >
         {options.map(opt => (
-          <option key={opt} value={opt} className="bg-[#18181f]">{opt}</option>
+          <option key={opt} value={opt} className="">{opt}</option>
         ))}
       </select>
     </div>
