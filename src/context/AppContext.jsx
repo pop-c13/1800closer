@@ -85,7 +85,9 @@ export function AppProvider({ children }) {
   });
 
   // Order builder state (shared between presenter panel and disposition)
-  const [orderProducts, setOrderProducts] = useState([]);
+  const [orderProducts, setOrderProducts] = useState([
+    { id: 'core', name: 'Core Accounting Package', price: 2949, terms: 'full' },
+  ]);
   const [orderPaymentMethod, setOrderPaymentMethod] = useState('Visa');
 
   // Computed savings
@@ -308,7 +310,9 @@ export function AppProvider({ children }) {
       spouseIncome: 0,
     }));
     setPricing({ annualPrice: '', paymentType: 'Full', cardType: 'Visa' });
-    setOrderProducts([]);
+    setOrderProducts([
+      { id: 'core', name: 'Core Accounting Package', price: 2949, terms: 'full' },
+    ]);
     setOrderPaymentMethod('Visa');
     setSessionData({
       slidesShown: [],
