@@ -130,6 +130,7 @@ function statusIndicator(status) {
 export default function LaunchScreen() {
   const navigate = useNavigate();
   const {
+    authUser,
     setRole,
     setRepName,
     setRepId,
@@ -139,6 +140,7 @@ export default function LaunchScreen() {
     setSlideVisibility,
     setCurrentSlideIndex,
     setCalculator,
+    resetSession,
   } = useApp();
 
   const [selectedRole, setSelectedRole] = useState('rep');
@@ -186,6 +188,9 @@ export default function LaunchScreen() {
 
   // ------ Launch handler (PRESERVED LOGIC) ------
   const handleLaunch = (appointment) => {
+    // Reset ALL state from any previous pitch
+    resetSession();
+
     const chosenDeck = deckOverrides[appointment.id] || appointment.recommendation.deck;
     const leadData = appointment.lead;
 
@@ -344,9 +349,16 @@ export default function LaunchScreen() {
               </button>
             </div>
 
-            {/* A logo */}
-            <div className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#F47920' }}>
-              <span className="text-white font-black text-sm leading-none">A</span>
+            {/* User avatar + name */}
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#F47920' }}>
+                <span className="text-white font-black text-sm leading-none">
+                  {(authUser?.name || selectedRep.name).charAt(0)}
+                </span>
+              </div>
+              <span className="hidden sm:block text-white/50 text-xs font-medium">
+                {authUser?.name || selectedRep.name}
+              </span>
             </div>
           </div>
         </div>

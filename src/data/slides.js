@@ -87,17 +87,7 @@ const slides = [
       type: "discovery"
     },
     notes:
-      "Now [LEAD_FIRST_NAME], before I show you everything we can do for you, I need to learn a bit about your situation. Every business has three pillars they need to get right from the start: registering properly, setting up proper accounting, and opening a business bank account.\n\n" +
-      "Let me ask you a few questions:\n\n" +
-      "1. Is [BUSINESS_NAME] your first business, or have you owned a business before?\n(pause for answer)\n\n" +
-      "2. How are you feeling about everything \u2014 excited, nervous, or a mix of both?\n(pause for answer)\n\n" +
-      "3. What motivated you to start this business?\n(pause for answer)\n\n" +
-      "4. I see your formation date is [FORMATION_DATE] \u2014 is that correct?\n(pause for answer)\n\n" +
-      "5. Are you doing this full-time or part-time alongside another job?\n(pause for answer)\n\n" +
-      "6. How much have you invested in startup costs so far? And where did that funding come from \u2014 savings, loans, credit cards?\n(pause for answer)\n\n" +
-      "7. Do you plan on investing more into the business this year?\n(pause for answer)\n\n" +
-      "8. Are you currently turning a profit, breaking even, or still in the early build-out phase?\n(pause for answer)\n\n" +
-      "9. Last year, did you get a tax refund or did you owe?\n(pause for answer)"
+      "Now [LEAD_FIRST_NAME], before I show you everything we can do for you, I need to learn a bit about your situation. Every business has three pillars they need to get right from the start: registering properly, setting up proper accounting, and opening a business bank account.\n\nUse the discovery form below to capture answers as you go."
   },
   {
     id: 6,

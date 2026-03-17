@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { SAVINGS_SLIDE } from '../context/AppContext';
+import { PRODUCT_CATALOG } from './DispositionModal';
 import SlideRenderer from './SlideRenderer';
 import CallTimer from './CallTimer';
 import WhisperToast from './WhisperToast';
@@ -190,6 +191,7 @@ export default function PresenterPanel() {
     showSummary,
     calculator, setCalculator,
     pricing, setPricing,
+    orderProducts, setOrderProducts, orderPaymentMethod, setOrderPaymentMethod,
     computedSavings,
     sessionId,
     observer, setObserver,
@@ -199,6 +201,7 @@ export default function PresenterPanel() {
     theme, toggleTheme,
     showSavingsBanner,
     showOutcomeSelector, confirmOutcome, sessionSaveStatus,
+    resetSession,
   } = useApp();
 
   const [showSlideManager, setShowSlideManager] = useState(false);
@@ -250,7 +253,7 @@ export default function PresenterPanel() {
   // ── Redirect if no lead ───────────────────────────────────────────────────
   useEffect(() => {
     if (!lead) {
-      navigate('/');
+      navigate('/home');
     }
   }, [lead, navigate]);
 
@@ -430,7 +433,8 @@ Provide a concise, actionable answer.`;
   const handleScorecardDone = () => {
     setShowScorecard(false);
     setScorecardData(null);
-    navigate('/');
+    resetSession();
+    navigate('/home');
   };
 
   // ── Early return if no lead ───────────────────────────────────────────────
@@ -521,28 +525,26 @@ Provide a concise, actionable answer.`;
   // ── Render inline discovery questions (slide 5) ───────────────────────────
   function renderInlineDiscovery() {
     return (
-      <div className="mt-4 space-y-2">
-        <div className="flex items-center justify-between mb-2">
-          <span className={`text-[10px] uppercase tracking-wider font-bold ${textDim}`}>Discovery Answers</span>
+      <div className="mt-2 space-y-1.5">
+        <div className="flex items-center justify-between mb-1">
+          <span className={`text-[10px] uppercase tracking-wider font-bold ${textDim}`}>Discovery</span>
           <span className="text-xs font-bold text-brand-orange">{discoveryFilled}/9</span>
         </div>
-        <div className="w-full h-1.5 rounded-full overflow-hidden mb-3" style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }}>
+        <div className="w-full h-1 rounded-full overflow-hidden mb-2" style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }}>
           <div
             className="h-full bg-brand-orange rounded-full transition-all duration-300"
             style={{ width: `${(discoveryFilled / 9) * 100}%` }}
           />
         </div>
-        {DISCOVERY_QUESTIONS.map((q, idx) => {
+        {DISCOVERY_QUESTIONS.map((q) => {
           const val = discoveryAnswers[q.key];
           const isCompleted = val !== '' && val !== false && val != null;
           return (
-            <div key={q.key} className={`p-2.5 rounded-lg border ${isCompleted ? 'border-green-500/30 ' + (isDark ? 'bg-green-500/5' : 'bg-green-50') : cardBg}`}>
+            <div key={q.key} className={`px-2.5 py-1.5 rounded-lg border ${isCompleted ? 'border-green-500/30 ' + (isDark ? 'bg-green-500/5' : 'bg-green-50') : cardBg}`}>
               <div className="flex items-start gap-2">
-                {isCompleted && <Check size={12} className="text-green-500 mt-0.5 shrink-0" />}
+                {isCompleted && <Check size={10} className="text-green-500 mt-1 shrink-0" />}
                 <div className="flex-1">
-                  <p className={`text-xs mb-1.5 ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
-                    <span className={textDim}>{idx + 1}.</span> {q.question}
-                  </p>
+                  <label className={`block text-[10px] uppercase tracking-wider font-semibold mb-1 ${isCompleted ? 'text-green-400/70' : textDim}`}>{q.question}</label>
 
                   {q.type === 'select' && (
                     <select
@@ -582,7 +584,7 @@ Provide a concise, actionable answer.`;
                   {/* Extra sub-question */}
                   {q.extra && (
                     <div className="mt-2">
-                      <p className={`text-[10px] ${textDim} mb-1`}>{q.extra.label}</p>
+                      <label className={`block text-[10px] uppercase tracking-wider font-semibold mb-1 ${textDim}`}>{q.extra.label}</label>
                       <select
                         value={discoveryAnswers[q.extra.key] || ''}
                         onChange={(e) => setDiscoveryAnswers(prev => ({ ...prev, [q.extra.key]: e.target.value }))}
@@ -726,46 +728,100 @@ Provide a concise, actionable answer.`;
     );
   }
 
-  // ── Render pricing input (slides 24, 38) ──────────────────────────────────
+  // ── Render Quick Quote builder (slides 23-24, 38) ────────────────────────
   function renderPricingInput() {
+    const TERM_OPTIONS = [
+      { key: 'full', label: 'Full' },
+      { key: '2-pay', label: '2' },
+      { key: '3-pay', label: '3' },
+      { key: '4-pay', label: '4' },
+    ];
+
+    const getFirst = (price, terms) => {
+      const p = parseFloat(price) || 0;
+      if (terms === '2-pay') return Math.ceil((p / 2) * 100) / 100;
+      if (terms === '3-pay') return Math.ceil((p / 3) * 100) / 100;
+      if (terms === '4-pay') return Math.ceil((p / 4) * 100) / 100;
+      return p;
+    };
+
+    const totalSale = orderProducts.reduce((s, p) => s + (parseFloat(p.price) || 0), 0);
+    const totalFirst = orderProducts.reduce((s, p) => s + getFirst(p.price, p.terms), 0);
+    const availableAddons = PRODUCT_CATALOG.filter(c => !orderProducts.some(o => o.id === c.id));
+
     return (
-      <div className={`mt-4 p-4 rounded-xl border ${cardBg} space-y-3`}>
-        <h3 className="text-sm font-semibold text-brand-orange uppercase tracking-wider">Pricing Input</h3>
-        <div>
-          <label className={`text-xs ${textMuted} block mb-1`}>Price (Annual)</label>
-          <input
-            type="text"
-            value={pricing.annualPrice}
-            onChange={(e) => setPricing(prev => ({ ...prev, annualPrice: e.target.value }))}
-            placeholder="e.g. 2499"
-            className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-orange/50 ${inputBg}`}
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={`text-xs ${textMuted} block mb-1`}>Payment Type</label>
-            <select
-              value={pricing.paymentType}
-              onChange={(e) => setPricing(prev => ({ ...prev, paymentType: e.target.value }))}
-              className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-orange/50 ${inputBg}`}
-            >
-              <option value="Full">Full</option>
-              <option value="Plan">Plan</option>
-            </select>
+      <div className={`mt-4 p-3 rounded-xl border ${cardBg} space-y-2`}>
+        <h3 className="text-xs font-bold text-brand-orange uppercase tracking-wider flex items-center gap-1.5">
+          {'\uD83D\uDCB0'} Quick Quote
+        </h3>
+
+        {/* Product rows */}
+        {orderProducts.map((product) => (
+          <div key={product.id} className={`p-2 rounded-lg border ${isDark ? 'border-white/10 bg-white/[0.03]' : 'border-gray-200 bg-gray-50'}`}>
+            <div className="flex items-center gap-2">
+              <span className={`text-xs font-medium flex-1 truncate ${text}`}>{product.name}</span>
+              {product.locked ? (
+                <span className="text-xs font-bold text-brand-orange">${parseFloat(product.price).toLocaleString()}</span>
+              ) : (
+                <div className="flex items-center gap-0.5">
+                  <span className={`text-[10px] ${textDim}`}>$</span>
+                  <input
+                    type="number"
+                    value={product.price}
+                    onChange={(e) => setOrderProducts(prev => prev.map(p => p.id === product.id ? { ...p, price: e.target.value } : p))}
+                    className={`w-16 border rounded px-1.5 py-0.5 text-xs text-right focus:outline-none focus:border-brand-orange/50 ${inputBg}`}
+                  />
+                </div>
+              )}
+              {!product.locked && (
+                <button
+                  onClick={() => setOrderProducts(prev => prev.filter(p => p.id !== product.id))}
+                  className={`${textDim} hover:text-red-400`}
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+            <div className="flex gap-1 mt-1">
+              {TERM_OPTIONS.map(opt => (
+                <button
+                  key={opt.key}
+                  onClick={() => setOrderProducts(prev => prev.map(p => p.id === product.id ? { ...p, terms: opt.key } : p))}
+                  className={`flex-1 px-1 py-0.5 rounded text-[10px] font-medium transition-all ${
+                    product.terms === opt.key
+                      ? 'bg-brand-orange/20 border-brand-orange/40 text-brand-orange border'
+                      : `bg-white/5 border ${isDark ? 'border-white/10 text-white/40' : 'border-gray-200 text-gray-400'} hover:bg-white/10`
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div>
-            <label className={`text-xs ${textMuted} block mb-1`}>Card Type</label>
-            <select
-              value={pricing.cardType}
-              onChange={(e) => setPricing(prev => ({ ...prev, cardType: e.target.value }))}
-              className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-orange/50 ${inputBg}`}
-            >
-              <option value="Visa">Visa</option>
-              <option value="MC">MC</option>
-              <option value="Amex">Amex</option>
-              <option value="Discover">Discover</option>
-            </select>
-          </div>
+        ))}
+
+        {/* Add product dropdown */}
+        {availableAddons.length > 0 && (
+          <select
+            value=""
+            onChange={(e) => {
+              if (!e.target.value) return;
+              const item = PRODUCT_CATALOG.find(p => p.id === e.target.value);
+              if (item) setOrderProducts(prev => [...prev, { id: item.id, name: item.name, price: item.defaultPrice, terms: 'full', locked: false }]);
+            }}
+            className={`w-full border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand-orange/50 ${inputBg} cursor-pointer`}
+          >
+            <option value="">+ Add Product</option>
+            {availableAddons.map(p => (
+              <option key={p.id} value={p.id}>{p.name} — ${p.defaultPrice.toLocaleString()}</option>
+            ))}
+          </select>
+        )}
+
+        {/* Totals */}
+        <div className={`flex items-center justify-between pt-1 border-t ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+          <span className={`text-xs font-semibold ${text}`}>Total: ${totalSale.toLocaleString()}</span>
+          <span className="text-xs font-semibold text-brand-orange">First: ${totalFirst.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
         </div>
       </div>
     );
@@ -774,7 +830,7 @@ Provide a concise, actionable answer.`;
   // ── Determine which inline content to show for current slide ──────────────
   const showDiscovery = currentSlide && currentSlide.id === 5;
   const showCalculator = currentSlide && ((typeof currentSlide.id === 'number' && currentSlide.id >= 13 && currentSlide.id <= 21) || currentSlide.id === '21b');
-  const showPricing = currentSlide && (currentSlide.id === 24 || currentSlide.id === 38);
+  const showPricing = currentSlide && (currentSlide.id === 23 || currentSlide.id === 24 || currentSlide.id === 38);
   const showIndustryIntro = currentSlide && currentSlide.id === 2;
   const showIndustryDeductions = currentSlide && (typeof currentSlide.id === 'number' && currentSlide.id >= 8 && currentSlide.id <= 12);
   const showIndustryStructure = currentSlide && (typeof currentSlide.id === 'number' && currentSlide.id >= 18 && currentSlide.id <= 20);
@@ -788,11 +844,14 @@ Provide a concise, actionable answer.`;
 
       {/* ─── TOP BAR ─────────────────────────────────────────────────────── */}
       <div className={`flex items-center h-12 px-4 ${barBg} border-b shrink-0 gap-3`}>
-        {/* Logo */}
-        <div className="flex items-center gap-1 shrink-0">
-          <span className="text-lg">🔥</span>
-          <span className={`${brandLabel} font-black text-lg leading-none`}>1-800-</span>
-          <span className="text-brand-orange font-black text-lg leading-none">CLOSER</span>
+        {/* Logo + Rep Name */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex items-center gap-1">
+            <span className="text-lg">{'\uD83D\uDD25'}</span>
+            <span className={`${brandLabel} font-black text-lg leading-none`}>1-800-</span>
+            <span className="text-brand-orange font-black text-lg leading-none">CLOSER</span>
+          </div>
+          <span className={`text-[10px] ${textDim} border-l ${isDark ? 'border-white/10' : 'border-gray-200'} pl-2.5`}>{repName}</span>
         </div>
 
         {/* Lead Info Card */}
@@ -1253,7 +1312,7 @@ Provide a concise, actionable answer.`;
                   Cancel
                 </button>
                 <button
-                  onClick={() => { setLead(null); navigate('/'); }}
+                  onClick={() => { resetSession(); setLead(null); navigate('/home'); }}
                   className="flex-1 px-4 py-2 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-400 transition-colors"
                 >
                   End Session

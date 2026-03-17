@@ -22,6 +22,9 @@ export const SAVINGS_SLIDE = {
 };
 
 export function AppProvider({ children }) {
+  // Auth user (set on login page)
+  const [authUser, setAuthUser] = useState(null);
+
   // Session config
   const [role, setRole] = useState('rep');
   const [repName, setRepName] = useState('Jake Morrison');
@@ -74,12 +77,18 @@ export function AppProvider({ children }) {
     spouseIncome: 0,
   });
 
-  // Pricing state
+  // Pricing state — product-based order
   const [pricing, setPricing] = useState({
     annualPrice: '',
     paymentType: 'Full',
     cardType: 'Visa',
   });
+
+  // Order builder state (shared between presenter panel and disposition)
+  const [orderProducts, setOrderProducts] = useState([
+    { id: 'core', name: 'Core Accounting Package', price: 2949, terms: 'full', locked: true },
+  ]);
+  const [orderPaymentMethod, setOrderPaymentMethod] = useState('Visa');
 
   // Computed savings
   const computeSavings = useCallback(() => {
@@ -273,6 +282,55 @@ export function AppProvider({ children }) {
     goToSlide(currentSlideIndex - 1);
   }, [currentSlideIndex, goToSlide]);
 
+  // Reset all session state for a fresh pitch
+  const resetSession = useCallback(() => {
+    setIsCallActive(false);
+    setCallStartTime(null);
+    setCallDuration(0);
+    setCurrentSlideIndex(0);
+    setDiscoveryAnswers({
+      firstBusiness: '',
+      feeling: '',
+      motivation: '',
+      formationConfirmed: false,
+      fullOrPartTime: '',
+      startupCosts: '',
+      fundingSource: '',
+      futureInvestment: '',
+      profitStatus: '',
+      lastYearTax: '',
+    });
+    setCalculator(prev => ({
+      ...prev,
+      incomeRange: '$50k–$100k',
+      incomeAmount: 75000,
+      employees: 'Just me',
+      taxRate: 25,
+      hasSpouse: false,
+      spouseIncome: 0,
+    }));
+    setPricing({ annualPrice: '', paymentType: 'Full', cardType: 'Visa' });
+    setOrderProducts([
+      { id: 'core', name: 'Core Accounting Package', price: 2949, terms: 'full', locked: true },
+    ]);
+    setOrderPaymentMethod('Visa');
+    setSessionData({
+      slidesShown: [],
+      slidesSkipped: [],
+      slideTimings: {},
+      objectionsClicked: [],
+      coachTips: [],
+      whisperMessages: [],
+      quickNotes: '',
+    });
+    setShowSavingsBanner(false);
+    setCallOutcome(null);
+    setShowOutcomeSelector(false);
+    setShowSummary(false);
+    setWhisperToasts([]);
+    setSessionId(null);
+  }, []);
+
   // Start/end call
   const startCall = useCallback(() => {
     const newSessionId = crypto.randomUUID();
@@ -358,9 +416,9 @@ export function AppProvider({ children }) {
       discovery_answers: discoveryAnswers,
       tax_calc_inputs: { incomeAmount: calculator.incomeAmount, taxRate: calculator.taxRate, hasSpouse: calculator.hasSpouse, spouseIncome: calculator.spouseIncome },
       computed_savings: computedSavings.annualSavings,
-      price_quoted: pricing.annualPrice || null,
+      price_quoted: dispositionData.totalSale || pricing.annualPrice || null,
       payment_type: pricing.paymentType || null,
-      card_type: pricing.cardType || null,
+      card_type: orderPaymentMethod || pricing.cardType || null,
       objections_handled: sessionData.objectionsClicked,
       call_notes: sessionData.quickNotes || '',
       outcome,
@@ -511,6 +569,7 @@ export function AppProvider({ children }) {
 
   const value = {
     sessionId,
+    authUser, setAuthUser,
     role, setRole,
     repName, setRepName,
     repId, setRepId,
@@ -522,7 +581,7 @@ export function AppProvider({ children }) {
     currentSlideIndex, setCurrentSlideIndex,
     visibleSlides, setVisibleSlides,
     isCallActive, callStartTime, callDuration,
-    startCall, endCall,
+    resetSession, startCall, endCall,
     showSummary, setShowSummary,
     callOutcome, setCallOutcome,
     showOutcomeSelector, setShowOutcomeSelector,
@@ -531,6 +590,8 @@ export function AppProvider({ children }) {
     showSavingsBanner, setShowSavingsBanner,
     calculator, setCalculator,
     pricing, setPricing,
+    orderProducts, setOrderProducts,
+    orderPaymentMethod, setOrderPaymentMethod,
     computedSavings,
     sessionData, setSessionData,
     whisperToasts, addWhisper, dismissWhisper,

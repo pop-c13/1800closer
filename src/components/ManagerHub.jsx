@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Eye, MessageSquare, Phone, Users, DollarSign, TrendingUp,
-  Clock, AlertTriangle, BarChart3, ArrowUpRight, ChevronRight
+  Clock, AlertTriangle, BarChart3, ArrowUpRight, ChevronRight,
+  Sun, Moon
 } from 'lucide-react';
+import { useApp } from '../context/AppContext';
 import { mockActiveSessions, mockRecentSessions, mockTeamPerformance, topObjections, teamMembers, completedSessionsWithScorecard } from '../data/sampleData';
 import { subscribeToActiveSessions } from '../lib/realtimeSync';
 import { isSupabaseConfigured } from '../lib/supabase';
@@ -58,6 +60,7 @@ const cardVariants = {
 // ---------------------------------------------------------------------------
 export default function ManagerHub() {
   const navigate = useNavigate();
+  const { authUser } = useApp();
   const [whisperOpen, setWhisperOpen] = useState(null); // session id or null
   const [whisperText, setWhisperText] = useState('');
   const [sortCol, setSortCol] = useState('name');
@@ -66,6 +69,67 @@ export default function ManagerHub() {
   const [dbRecentSessions, setDbRecentSessions] = useState(null);
   const [dbTeamStats, setDbTeamStats] = useState(null);
   const [scorecardSession, setScorecardSession] = useState(null);
+  const [isDark, setIsDark] = useState(true);
+
+  // Theme object
+  const t = isDark ? {
+    bg: '#0f0f13',
+    headerBg: '#18181f',
+    cardBg: 'rgba(255,255,255,0.03)',
+    cardBorder: 'border-white/10',
+    cardHover: 'hover:bg-white/[0.04]',
+    text: 'text-white',
+    textMuted: 'text-white/70',
+    textDim: 'text-white/40',
+    textFaint: 'text-white/20',
+    borderColor: 'border-white/10',
+    inputBg: 'bg-white/5',
+    badgeBg: 'bg-white/5',
+    sectionBg: 'rgba(255,255,255,0.03)',
+    accent: '#F47920',
+    progressBg: 'bg-white/10',
+    shadow: 'shadow-lg shadow-black/20',
+    headerShadow: '',
+    rowHover: 'hover:bg-white/[0.04]',
+    rowAlt: 'bg-white/[0.015]',
+    divider: 'bg-white/10',
+    dividerBorder: 'border-white/5',
+    statusText: 'text-white/30',
+    inputBorder: 'border-white/10',
+    inputText: 'text-white',
+    inputPlaceholder: 'placeholder-white/30',
+  } : {
+    bg: '#f8f9fc',
+    headerBg: '#ffffff',
+    cardBg: '#ffffff',
+    cardBorder: 'border-gray-200',
+    cardHover: 'hover:bg-gray-50',
+    text: 'text-gray-900',
+    textMuted: 'text-gray-600',
+    textDim: 'text-gray-400',
+    textFaint: 'text-gray-300',
+    borderColor: 'border-gray-200',
+    inputBg: 'bg-gray-50',
+    badgeBg: 'bg-gray-100',
+    sectionBg: '#ffffff',
+    accent: '#F47920',
+    progressBg: 'bg-gray-200',
+    shadow: 'shadow-sm shadow-gray-200/60',
+    headerShadow: 'shadow-sm shadow-gray-200/50',
+    rowHover: 'hover:bg-gray-50',
+    rowAlt: 'bg-gray-50/50',
+    divider: 'bg-gray-200',
+    dividerBorder: 'border-gray-100',
+    statusText: 'text-gray-400',
+    inputBorder: 'border-gray-200',
+    inputText: 'text-gray-900',
+    inputPlaceholder: 'placeholder-gray-400',
+  };
+
+  // Helper for card background style
+  const cardStyle = isDark
+    ? { backgroundColor: 'rgba(255,255,255,0.03)' }
+    : { backgroundColor: '#ffffff' };
 
   useEffect(() => {
     async function fetchData() {
@@ -168,35 +232,41 @@ export default function ManagerHub() {
 
   // ---- Render ----
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#0f0f13' }}>
+    <div className="min-h-screen flex flex-col transition-colors duration-300" style={{ backgroundColor: t.bg }}>
       {/* ===== TOP BAR ===== */}
-      <header className="sticky top-0 z-30 flex items-center justify-between px-4 md:px-8 py-3 border-b border-white/10" style={{ backgroundColor: '#18181f' }}>
+      <header className={`sticky top-0 z-30 flex items-center justify-between px-4 md:px-8 py-3 border-b ${t.borderColor} backdrop-blur-xl ${t.headerShadow} transition-colors duration-300`} style={{ backgroundColor: t.headerBg }}>
         {/* Left: Logo */}
         <div className="flex items-center gap-3">
           <span className="text-2xl select-none" role="img" aria-label="fire">🔥</span>
           <h1 className="text-xl md:text-2xl font-black tracking-tight select-none">
-            <span className="text-white/60">1-800-</span>
+            <span className={isDark ? 'text-white/60' : 'text-gray-400'}>{`1-800-`}</span>
             <span style={{ color: '#F47920' }}>CLOSER</span>
           </h1>
-          <span className="hidden sm:inline-block text-white/40 text-xs font-medium tracking-wide ml-1 mt-0.5">Manager Hub</span>
+          <span className={`hidden sm:inline-block ${t.textDim} text-xs font-medium tracking-wide ml-1 mt-0.5`}>Manager Hub</span>
         </div>
 
-        {/* Right: Manager info + Live count */}
+        {/* Right: Manager info + Live count + Theme toggle */}
         <div className="flex items-center gap-4">
           <div className="hidden sm:flex flex-col items-end">
-            <span className="text-white text-sm font-semibold leading-tight">Alex Rivera</span>
+            <span className={`${t.text} text-sm font-semibold leading-tight`}>{authUser?.name || 'Alex Rivera'}</span>
             <span className="text-xs font-medium px-2 py-0.5 rounded-full mt-0.5" style={{ backgroundColor: '#F47920', color: '#fff' }}>Manager</span>
           </div>
-          <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
+          <div className={`flex items-center gap-2 ${t.inputBg} border ${t.borderColor} rounded-full px-3 py-1.5`}>
             <span className="relative flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
             </span>
-            <span className="text-white text-sm font-semibold">{liveCount} Live</span>
+            <span className={`${t.text} text-sm font-semibold`}>{liveCount} Live</span>
           </div>
           {isSupabaseConfigured() && liveSessions !== null && (
             <span className="text-[10px] text-green-400/60 font-medium tracking-wider">REALTIME</span>
           )}
+          <button
+            onClick={() => setIsDark(!isDark)}
+            className={`p-2 rounded-xl transition-all ${isDark ? 'bg-white/5 hover:bg-white/10 text-white/60' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}
+          >
+            {isDark ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
         </div>
       </header>
 
@@ -212,7 +282,7 @@ export default function ManagerHub() {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 onClick={() => navigate(`/manager/live/${s.id}`)}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/15 transition-colors"
+                className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/15 transition-colors"
               >
                 <span className="text-red-400 text-sm font-semibold">
                   ⚠️ {s.repName} may run over — {formatDuration(s.duration)} into call, still on slide {s.currentSlide}/{s.totalSlides}
@@ -225,12 +295,13 @@ export default function ManagerHub() {
         {/* ────────── LIVE NOW ────────── */}
         <section>
           <div className="flex items-center gap-3 mb-4">
+            <div className="w-[3px] h-6 rounded-full" style={{ backgroundColor: '#F47920' }} />
             <span className="relative flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
               <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
             </span>
-            <h2 className="text-white text-lg font-bold tracking-tight">LIVE NOW</h2>
-            <span className="text-white/40 text-sm">{activeSessions.length} sessions</span>
+            <h2 className={`${t.text} text-lg font-bold tracking-tight`}>LIVE NOW</h2>
+            <span className={`${t.textDim} text-sm`}>{activeSessions.length} sessions</span>
           </div>
 
           <motion.div
@@ -248,27 +319,30 @@ export default function ManagerHub() {
               const slideProgress = session.currentSlide / session.totalSlides;
               const timeProgress = session.duration / 1800;
 
-              let pacingStatus, pacingLabel, pacingClass;
+              let pacingStatus, pacingLabel, pacingClass, pacingBorderColor;
               if (slideProgress < 0.5 && session.duration > 1200) {
                 pacingStatus = 'critical';
                 pacingLabel = '🔴 May run over';
                 pacingClass = 'bg-red-500/15 text-red-400 border-red-500/20';
+                pacingBorderColor = 'border-l-red-500';
               } else if (slideProgress < timeProgress * 0.7) {
                 pacingStatus = 'behind';
                 pacingLabel = '⚠️ Behind pace';
                 pacingClass = 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20';
+                pacingBorderColor = 'border-l-yellow-500';
               } else {
                 pacingStatus = 'ok';
                 pacingLabel = '✅ On pace';
                 pacingClass = 'bg-green-500/15 text-green-400 border-green-500/20';
+                pacingBorderColor = 'border-l-green-500';
               }
 
               return (
                 <motion.div
                   key={session.id}
                   variants={cardVariants}
-                  className="rounded-xl border border-white/10 p-5 flex flex-col gap-3"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+                  className={`rounded-2xl border ${t.cardBorder} border-l-4 ${pacingBorderColor} p-5 flex flex-col gap-3 ${t.shadow} transition-all duration-200 hover:-translate-y-0.5 ${t.cardHover}`}
+                  style={cardStyle}
                 >
                   {/* Rep name + status dot */}
                   <div className="flex items-center justify-between">
@@ -277,55 +351,55 @@ export default function ManagerHub() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          const member = teamMembers.find(t => t.name === session.repName);
+                          const member = teamMembers.find(tm => tm.name === session.repName);
                           if (member) navigate(`/manager/rep/${member.id}`);
                         }}
-                        className="text-white font-bold text-base hover:text-brand-orange transition-colors underline-offset-2 hover:underline"
+                        className={`${t.text} font-bold text-base hover:text-brand-orange transition-colors underline-offset-2 hover:underline`}
                       >
                         {session.repName}
                       </button>
                     </div>
-                    <span className="text-white/30 text-xs uppercase tracking-wider font-semibold">{session.status}</span>
+                    <span className={`${t.statusText} text-xs uppercase tracking-wider font-semibold`}>{session.status}</span>
                   </div>
 
-                  <div className="h-px bg-white/10" />
+                  <div className={`h-px ${t.divider}`} />
 
                   {/* Presenting to */}
                   <div>
-                    <span className="text-white/40 text-xs uppercase tracking-wider">Presenting to</span>
-                    <p className="text-white font-semibold text-sm mt-0.5">{session.leadName}</p>
-                    <p className="text-white/50 text-xs">{session.businessName}</p>
+                    <span className={`${t.textDim} text-xs uppercase tracking-wider`}>Presenting to</span>
+                    <p className={`${t.text} font-semibold text-sm mt-0.5`}>{session.leadName}</p>
+                    <p className={`${isDark ? 'text-white/50' : 'text-gray-500'} text-xs`}>{session.businessName}</p>
                   </div>
 
                   {/* Slide info */}
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="text-white/40 text-xs">
+                      <span className={`${t.textDim} text-xs`}>
                         Slide: {session.currentSlide}/{session.totalSlides}
                       </span>
-                      <span className="text-white/60 text-xs font-medium">{progress}%</span>
+                      <span className={`${t.textMuted} text-xs font-medium`}>{progress}%</span>
                     </div>
-                    <p className="text-white/70 text-xs italic mt-0.5">"{session.slideTitle}"</p>
+                    <p className={`${t.textMuted} text-xs italic mt-0.5`}>"{session.slideTitle}"</p>
                     {/* Progress bar */}
-                    <div className="mt-2 w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                    <div className={`mt-2 w-full h-2.5 rounded-full ${t.progressBg} overflow-hidden`}>
                       <div
                         className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${progress}%`, backgroundColor: '#F47920' }}
+                        style={{ width: `${progress}%`, background: 'linear-gradient(90deg, #F47920, #FF9F43)' }}
                       />
                     </div>
                   </div>
 
                   {/* Stats row */}
                   <div className="flex items-center gap-4 flex-wrap text-xs">
-                    <div className="flex items-center gap-1.5 text-white/60">
-                      <Clock size={13} className="text-white/40" />
+                    <div className={`flex items-center gap-1.5 ${t.textMuted}`}>
+                      <Clock size={13} className={t.textDim} />
                       <span>{formatDuration(session.duration)}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-white/60">
+                    <div className={`flex items-center gap-1.5 ${t.textMuted}`}>
                       <DollarSign size={13} className="text-green-400" />
                       <span>{formatMoney(session.computedSavings)}/yr</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-white/60">
+                    <div className={`flex items-center gap-1.5 ${t.textMuted}`}>
                       <AlertTriangle size={13} className="text-yellow-400" />
                       <span>{session.objectionsHandled} objection{session.objectionsHandled !== 1 ? 's' : ''}</span>
                     </div>
@@ -340,17 +414,18 @@ export default function ManagerHub() {
                   <div className="flex items-center gap-2 mt-1">
                     <button
                       onClick={() => navigate(`/manager/live/${session.id}`)}
-                      className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-white/5 border border-white/10 text-white/80 text-sm font-medium hover:bg-white/10 transition-colors"
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg ${t.inputBg} border ${t.borderColor} ${t.textMuted} text-sm font-medium transition-all hover:shadow-md ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'} hover:shadow-orange-500/10`}
+                      style={{ }}
                     >
                       <Eye size={15} />
                       Listen In
                     </button>
                     <button
                       onClick={() => toggleWhisper(session.id)}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
                         whisperOpen === session.id
                           ? 'bg-orange-500/20 border border-orange-500/40 text-orange-300'
-                          : 'bg-white/5 border border-white/10 text-white/80 hover:bg-white/10'
+                          : `${t.inputBg} border ${t.borderColor} ${t.textMuted} ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'}`
                       }`}
                     >
                       <MessageSquare size={15} />
@@ -371,14 +446,14 @@ export default function ManagerHub() {
                         value={whisperText}
                         onChange={e => setWhisperText(e.target.value)}
                         placeholder="Type a whisper message..."
-                        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-orange-500/50"
+                        className={`flex-1 ${t.inputBg} border ${t.inputBorder} rounded-lg px-3 py-2 text-sm ${t.inputText} ${t.inputPlaceholder} focus:outline-none focus:ring-1 focus:ring-orange-500/50`}
                       />
                       <button
                         onClick={() => {
                           setWhisperText('');
                           setWhisperOpen(null);
                         }}
-                        className="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors hover:brightness-110"
+                        className="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all hover:brightness-110 hover:shadow-lg hover:shadow-orange-500/25"
                         style={{ backgroundColor: '#F47920' }}
                       >
                         Send
@@ -393,7 +468,10 @@ export default function ManagerHub() {
 
         {/* ────────── TODAY'S SUMMARY ────────── */}
         <section>
-          <h2 className="text-white text-lg font-bold tracking-tight mb-4">TODAY'S SUMMARY</h2>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-[3px] h-6 rounded-full" style={{ backgroundColor: '#F47920' }} />
+            <h2 className={`${t.text} text-lg font-bold tracking-tight`}>TODAY'S SUMMARY</h2>
+          </div>
           <motion.div
             variants={containerVariants}
             initial="hidden"
@@ -401,23 +479,23 @@ export default function ManagerHub() {
             className="grid grid-cols-2 lg:grid-cols-4 gap-4"
           >
             {[
-              { label: 'Total Calls', value: dbTeamStats ? String(dbTeamStats.totalCalls) : '12', icon: Phone, color: '#3B82F6', bg: 'bg-blue-500/15' },
-              { label: 'Deals Closed', value: dbTeamStats ? String(dbTeamStats.closedToday) : '5', icon: DollarSign, color: '#22C55E', bg: 'bg-green-500/15' },
-              { label: 'Revenue Booked', value: dbTeamStats ? `$${dbTeamStats.revenueBooked.toLocaleString()}` : '$13,695', icon: TrendingUp, color: '#F47920', bg: 'bg-orange-500/15' },
-              { label: 'Team Close Rate', value: dbTeamStats ? `${dbTeamStats.closeRate}%` : '58%', icon: BarChart3, color: '#A855F7', bg: 'bg-purple-500/15' },
+              { label: 'Total Calls', value: dbTeamStats ? String(dbTeamStats.totalCalls) : '12', icon: Phone, color: '#3B82F6', bg: 'bg-blue-500/15', gradient: 'from-blue-500/20 to-blue-600/10' },
+              { label: 'Deals Closed', value: dbTeamStats ? String(dbTeamStats.closedToday) : '5', icon: DollarSign, color: '#22C55E', bg: 'bg-green-500/15', gradient: 'from-green-500/20 to-green-600/10' },
+              { label: 'Revenue Booked', value: dbTeamStats ? `$${dbTeamStats.revenueBooked.toLocaleString()}` : '$13,695', icon: TrendingUp, color: '#F47920', bg: 'bg-orange-500/15', gradient: 'from-orange-500/20 to-orange-600/10' },
+              { label: 'Team Close Rate', value: dbTeamStats ? `${dbTeamStats.closeRate}%` : '58%', icon: BarChart3, color: '#A855F7', bg: 'bg-purple-500/15', gradient: 'from-purple-500/20 to-purple-600/10' },
             ].map((stat) => (
               <motion.div
                 key={stat.label}
                 variants={cardVariants}
-                className="rounded-xl border border-white/10 p-5 flex flex-col gap-3"
-                style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+                className={`rounded-2xl border ${t.cardBorder} p-5 flex flex-col gap-3 ${t.shadow} transition-all duration-200 hover:-translate-y-0.5 ${t.cardHover}`}
+                style={cardStyle}
               >
-                <div className={`w-10 h-10 rounded-lg ${stat.bg} flex items-center justify-center`}>
+                <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${stat.gradient} flex items-center justify-center`}>
                   <stat.icon size={20} style={{ color: stat.color }} />
                 </div>
                 <div>
-                  <p className="text-white text-2xl font-bold leading-tight">{stat.value}</p>
-                  <p className="text-white/40 text-xs mt-0.5">{stat.label}</p>
+                  <p className={`${t.text} text-2xl font-bold leading-tight`} style={{ textShadow: isDark ? `0 0 20px ${stat.color}15` : 'none' }}>{stat.value}</p>
+                  <p className={`${t.textDim} text-xs mt-0.5`}>{stat.label}</p>
                 </div>
               </motion.div>
             ))}
@@ -426,10 +504,13 @@ export default function ManagerHub() {
 
         {/* ────────── RECENT SESSIONS ────────── */}
         <section>
-          <h2 className="text-white text-lg font-bold tracking-tight mb-4">RECENT SESSIONS</h2>
-          <div className="rounded-xl border border-white/10 overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-[3px] h-6 rounded-full" style={{ backgroundColor: '#F47920' }} />
+            <h2 className={`${t.text} text-lg font-bold tracking-tight`}>RECENT SESSIONS</h2>
+          </div>
+          <div className={`rounded-2xl border ${t.cardBorder} overflow-hidden ${t.shadow}`} style={cardStyle}>
             {/* Header row - hidden on mobile */}
-            <div className="hidden md:grid grid-cols-12 gap-2 px-5 py-3 border-b border-white/10 text-white/40 text-xs uppercase tracking-wider font-semibold">
+            <div className={`hidden md:grid grid-cols-12 gap-2 px-5 py-3 border-b ${t.borderColor} ${t.textDim} text-xs uppercase tracking-wider font-semibold`}>
               <div className="col-span-4">Session</div>
               <div className="col-span-1 text-center">Duration</div>
               <div className="col-span-2 text-center">Price Quoted</div>
@@ -447,40 +528,40 @@ export default function ManagerHub() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: idx * 0.04, duration: 0.3 }}
                   className={`grid grid-cols-1 md:grid-cols-12 gap-2 px-5 py-4 items-center ${
-                    idx < displayRecentSessions.length - 1 ? 'border-b border-white/5' : ''
-                  } hover:bg-white/[0.02] transition-colors`}
+                    idx < displayRecentSessions.length - 1 ? `border-b ${t.dividerBorder}` : ''
+                  } ${idx % 2 === 1 ? t.rowAlt : ''} ${t.rowHover} transition-colors duration-150`}
                 >
                   {/* Session info */}
                   <div className="md:col-span-4">
-                    <p className="text-white text-sm font-semibold">
+                    <p className={`${t.text} text-sm font-semibold`}>
                       <button
                         onClick={() => {
-                          const member = teamMembers.find(t => t.name === session.repName);
+                          const member = teamMembers.find(tm => tm.name === session.repName);
                           if (member) navigate(`/manager/rep/${member.id}`);
                         }}
                         className="hover:text-brand-orange transition-colors underline-offset-2 hover:underline"
                       >
                         {session.repName}
                       </button>
-                      <span className="text-white/30 mx-1.5">&rarr;</span>
-                      <span className="text-white/70">{session.leadName}</span>
+                      <span className={`${t.textFaint} mx-1.5`}>&rarr;</span>
+                      <span className={t.textMuted}>{session.leadName}</span>
                     </p>
-                    <p className="text-white/40 text-xs">{session.businessName}</p>
+                    <p className={`${t.textDim} text-xs`}>{session.businessName}</p>
                   </div>
 
                   {/* Duration */}
                   <div className="md:col-span-1 text-center">
-                    <span className="text-white/60 text-sm">{formatDuration(session.duration)}</span>
+                    <span className={`${t.textMuted} text-sm`}>{formatDuration(session.duration)}</span>
                   </div>
 
                   {/* Price quoted */}
                   <div className="md:col-span-2 text-center">
-                    <span className="text-white/80 text-sm font-medium">{formatMoney(session.priceQuoted)}</span>
+                    <span className={`${isDark ? 'text-white/80' : 'text-gray-800'} text-sm font-medium`}>{formatMoney(session.priceQuoted)}</span>
                   </div>
 
                   {/* Objections */}
                   <div className="md:col-span-1 text-center">
-                    <span className="text-white/60 text-sm">{session.objections}</span>
+                    <span className={`${t.textMuted} text-sm`}>{session.objections}</span>
                   </div>
 
                   {/* Outcome */}
@@ -536,7 +617,7 @@ export default function ManagerHub() {
                         };
                         setScorecardSession(scData);
                       }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/60 text-xs font-medium hover:bg-white/10 hover:text-white/80 transition-colors"
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg ${t.inputBg} border ${t.borderColor} ${t.textMuted} text-xs font-medium transition-all hover:shadow-sm ${isDark ? 'hover:bg-white/10 hover:text-white/80' : 'hover:bg-gray-100 hover:text-gray-800'}`}
                     >
                       View Summary
                       <ChevronRight size={13} />
@@ -550,11 +631,14 @@ export default function ManagerHub() {
 
         {/* ────────── TEAM PERFORMANCE ────────── */}
         <section>
-          <h2 className="text-white text-lg font-bold tracking-tight mb-4">TEAM PERFORMANCE</h2>
-          <div className="rounded-xl border border-white/10 overflow-x-auto" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-[3px] h-6 rounded-full" style={{ backgroundColor: '#F47920' }} />
+            <h2 className={`${t.text} text-lg font-bold tracking-tight`}>TEAM PERFORMANCE</h2>
+          </div>
+          <div className={`rounded-2xl border ${t.cardBorder} overflow-x-auto ${t.shadow}`} style={cardStyle}>
             <table className="w-full min-w-[540px]">
               <thead>
-                <tr className="border-b border-white/10">
+                <tr className={`border-b ${t.borderColor}`}>
                   {[
                     { key: 'name', label: 'Rep Name', align: 'text-left' },
                     { key: 'calls', label: 'Calls', align: 'text-center' },
@@ -565,8 +649,8 @@ export default function ManagerHub() {
                     <th
                       key={col.key}
                       onClick={() => handleSort(col.key)}
-                      className={`px-5 py-3 text-xs uppercase tracking-wider font-semibold cursor-pointer select-none transition-colors hover:text-white/70 ${col.align} ${
-                        sortCol === col.key ? 'text-orange-400' : 'text-white/40'
+                      className={`px-5 py-3 text-xs uppercase tracking-wider font-semibold cursor-pointer select-none transition-colors ${isDark ? 'hover:text-white/70' : 'hover:text-gray-700'} ${col.align} ${
+                        sortCol === col.key ? 'text-orange-400' : t.textDim
                       }`}
                     >
                       <span className="inline-flex items-center gap-1">
@@ -584,30 +668,30 @@ export default function ManagerHub() {
                   <tr
                     key={rep.name}
                     className={`${
-                      idx < sortedPerformance.length - 1 ? 'border-b border-white/5' : ''
-                    } hover:bg-white/[0.02] transition-colors`}
+                      idx < sortedPerformance.length - 1 ? `border-b ${t.dividerBorder}` : ''
+                    } ${idx % 2 === 1 ? t.rowAlt : ''} ${t.rowHover} transition-colors duration-150`}
                   >
                     <td className="px-5 py-3.5">
                       <button
                         onClick={() => {
-                          const member = teamMembers.find(t => t.name === rep.name);
+                          const member = teamMembers.find(tm => tm.name === rep.name);
                           if (member) navigate(`/manager/rep/${member.id}`);
                         }}
-                        className="text-white text-sm font-semibold hover:text-brand-orange transition-colors underline-offset-2 hover:underline"
+                        className={`${t.text} text-sm font-semibold hover:text-brand-orange transition-colors underline-offset-2 hover:underline`}
                       >
                         {rep.name}
                       </button>
                     </td>
-                    <td className="px-5 py-3.5 text-white/70 text-sm text-center">{rep.calls}</td>
+                    <td className={`px-5 py-3.5 ${t.textMuted} text-sm text-center`}>{rep.calls}</td>
                     <td className="px-5 py-3.5 text-center">
-                      <span className={`text-sm font-semibold ${
+                      <span className={`text-base font-bold ${
                         rep.closeRate >= 60 ? 'text-green-400' : rep.closeRate >= 50 ? 'text-yellow-400' : 'text-red-400'
                       }`}>
                         {rep.closeRate}%
                       </span>
                     </td>
-                    <td className="px-5 py-3.5 text-white/70 text-sm text-center">{formatDuration(rep.avgDuration)}</td>
-                    <td className="px-5 py-3.5 text-white/80 text-sm font-medium text-right">{formatMoney(rep.avgSavings)}</td>
+                    <td className={`px-5 py-3.5 ${t.textMuted} text-sm text-center`}>{formatDuration(rep.avgDuration)}</td>
+                    <td className={`px-5 py-3.5 ${isDark ? 'text-white/80' : 'text-gray-800'} text-sm font-medium text-right`}>{formatMoney(rep.avgSavings)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -617,10 +701,13 @@ export default function ManagerHub() {
 
         {/* ────────── TOP OBJECTIONS THIS WEEK ────────── */}
         <section className="pb-8">
-          <h2 className="text-white text-lg font-bold tracking-tight mb-4">TOP OBJECTIONS THIS WEEK</h2>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-[3px] h-6 rounded-full" style={{ backgroundColor: '#F47920' }} />
+            <h2 className={`${t.text} text-lg font-bold tracking-tight`}>TOP OBJECTIONS THIS WEEK</h2>
+          </div>
           <div
-            className="rounded-xl border border-white/10 p-5 space-y-4"
-            style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+            className={`rounded-2xl border ${t.cardBorder} p-5 space-y-4 ${t.shadow}`}
+            style={cardStyle}
           >
             {topObjections.map((obj, idx) => (
               <motion.div
@@ -631,10 +718,10 @@ export default function ManagerHub() {
                 className="flex items-center gap-4"
               >
                 {/* Label */}
-                <span className="text-white/70 text-sm w-52 min-w-[130px] shrink-0 truncate">{obj.text}</span>
+                <span className={`${t.textMuted} text-sm w-52 min-w-[130px] shrink-0 truncate`}>{obj.text}</span>
 
                 {/* Bar */}
-                <div className="flex-1 h-6 rounded-full bg-white/5 overflow-hidden relative">
+                <div className={`flex-1 h-6 rounded-full ${t.inputBg} overflow-hidden relative`}>
                   <div
                     className="h-full rounded-full"
                     style={{
@@ -645,7 +732,7 @@ export default function ManagerHub() {
                 </div>
 
                 {/* Percentage */}
-                <span className="text-white/80 text-sm font-semibold w-12 text-right shrink-0">{obj.percentage}%</span>
+                <span className={`${isDark ? 'text-white/80' : 'text-gray-800'} text-sm font-semibold w-12 text-right shrink-0`}>{obj.percentage}%</span>
               </motion.div>
             ))}
           </div>

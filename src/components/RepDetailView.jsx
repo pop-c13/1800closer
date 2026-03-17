@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Phone, TrendingUp, Clock, DollarSign, AlertTriangle, User, Sparkles } from 'lucide-react';
+import { ArrowLeft, Phone, TrendingUp, Clock, DollarSign, AlertTriangle, User, Sparkles, Sun, Moon } from 'lucide-react';
 import { teamMembers, mockTeamPerformance, repPitchHistory, repInsights, completedSessionsWithScorecard } from '../data/sampleData';
 import { getRepStats } from '../lib/sessionDB';
 import PostCallScorecard from './PostCallScorecard';
@@ -49,6 +49,24 @@ export default function RepDetailView() {
 
   const [dbStats, setDbStats] = useState(null);
   const [scorecardSession, setScorecardSession] = useState(null);
+  const [isDark, setIsDark] = useState(true);
+
+  // Theme variables
+  const t = isDark ? {
+    bg: '#0f0f13', headerBg: '#18181f', cardBg: 'rgba(255,255,255,0.03)',
+    text: 'text-white', textMuted: 'text-white/70', textDim: 'text-white/40',
+    border: 'border-white/10', inputBg: 'bg-white/5', shadow: 'shadow-lg shadow-black/20',
+    rowHover: 'hover:bg-white/[0.04]', rowBorder: 'border-white/5',
+    btnBg: 'bg-white/5', btnBorder: 'border-white/10', btnText: 'text-white/60',
+    btnHover: 'hover:bg-white/10', insightsBg: '#18181f',
+  } : {
+    bg: '#f8f9fc', headerBg: '#ffffff', cardBg: '#ffffff',
+    text: 'text-gray-900', textMuted: 'text-gray-600', textDim: 'text-gray-400',
+    border: 'border-gray-200', inputBg: 'bg-gray-50', shadow: 'shadow-md shadow-gray-200/50',
+    rowHover: 'hover:bg-gray-50', rowBorder: 'border-gray-100',
+    btnBg: 'bg-gray-50', btnBorder: 'border-gray-200', btnText: 'text-gray-500',
+    btnHover: 'hover:bg-gray-100', insightsBg: '#ffffff',
+  };
 
   useEffect(() => {
     if (!member) return;
@@ -62,14 +80,14 @@ export default function RepDetailView() {
   // Rep not found
   if (!member) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: '#0f0f13' }}>
+      <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: t.bg }}>
         <div className="text-center space-y-4">
-          <User size={48} className="text-white/30 mx-auto" />
-          <h2 className="text-white text-xl font-bold">Rep not found</h2>
-          <p className="text-white/50 text-sm">No team member matches the ID "{repId}".</p>
+          <User size={48} className={`${t.textDim} mx-auto`} />
+          <h2 className={`${t.text} text-xl font-bold`}>Rep not found</h2>
+          <p className={`${t.textDim} text-sm`}>No team member matches the ID "{repId}".</p>
           <button
             onClick={() => navigate('/manager')}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white text-sm font-medium hover:bg-white/15 transition-colors"
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg ${t.btnBg} border ${t.border} ${t.text} text-sm font-medium ${t.btnHover} transition-colors`}
           >
             <ArrowLeft size={16} />
             Back to Manager Hub
@@ -126,7 +144,7 @@ export default function RepDetailView() {
     ) {
       return 'text-yellow-400';
     }
-    return 'text-white/70';
+    return t.textMuted;
   }
 
   // Script adherence color
@@ -137,26 +155,34 @@ export default function RepDetailView() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#0f0f13' }}>
+    <div className="min-h-screen flex flex-col transition-colors duration-300" style={{ backgroundColor: t.bg }}>
       {/* ===== TOP BAR ===== */}
       <header
-        className="sticky top-0 z-30 flex items-center gap-4 px-4 md:px-8 py-3 border-b border-white/10"
-        style={{ backgroundColor: '#18181f' }}
+        className={`sticky top-0 z-30 flex items-center gap-4 px-4 md:px-8 py-3 border-b ${t.border} ${t.shadow} transition-colors duration-300`}
+        style={{ backgroundColor: t.headerBg }}
       >
         <button
           onClick={() => navigate('/manager')}
-          className="flex items-center justify-center w-9 h-9 rounded-lg bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white transition-colors"
+          className={`flex items-center justify-center w-9 h-9 rounded-xl ${t.btnBg} border ${t.border} ${t.btnText} ${t.btnHover} hover:text-white transition-all duration-200`}
         >
           <ArrowLeft size={18} />
         </button>
 
         <div className="flex-1 flex items-center gap-3">
-          <h1 className="text-white text-xl md:text-2xl font-bold">{member.name}</h1>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-white/5 border border-white/10 text-white/70">
-            <span className={`w-2 h-2 rounded-full ${status.color}`} />
+          <h1 className={`${t.text} text-xl md:text-2xl font-bold`}>{member.name}</h1>
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${t.btnBg} border ${t.border} ${t.textMuted}`}>
+            <span className={`w-2.5 h-2.5 rounded-full ${status.color} ring-2 ring-offset-1 ${isDark ? 'ring-offset-[#18181f]' : 'ring-offset-white'} ${status.color === 'bg-green-500' ? 'ring-green-500/30' : status.color === 'bg-orange-500' ? 'ring-orange-500/30' : 'ring-gray-500/30'}`} />
             {status.label}
           </span>
         </div>
+
+        {/* Theme toggle */}
+        <button
+          onClick={() => setIsDark(!isDark)}
+          className={`p-2 rounded-xl transition-all ${isDark ? 'bg-white/5 hover:bg-white/10 text-white/60' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}
+        >
+          {isDark ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
       </header>
 
       {/* ===== SCROLLABLE CONTENT ===== */}
@@ -173,44 +199,44 @@ export default function RepDetailView() {
             {/* Total Calls */}
             <motion.div
               variants={cardVariants}
-              className="rounded-xl border border-white/10 p-5 flex flex-col gap-3"
-              style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+              className={`rounded-2xl border ${t.border} p-5 flex flex-col gap-3 ${t.shadow} hover:-translate-y-0.5 transition-all duration-200`}
+              style={{ backgroundColor: t.cardBg, borderLeft: '4px solid #3B82F6' }}
             >
               <div className="w-10 h-10 rounded-lg bg-blue-500/15 flex items-center justify-center">
                 <Phone size={20} className="text-blue-400" />
               </div>
               <div>
-                <p className="text-white text-2xl font-bold leading-tight">{displayStats.calls}</p>
-                <p className="text-white/40 text-xs mt-0.5">Total Calls This Week</p>
+                <p className={`${t.text} text-2xl font-bold leading-tight`}>{displayStats.calls}</p>
+                <p className={`${t.textDim} text-xs mt-0.5`}>Total Calls This Week</p>
               </div>
             </motion.div>
 
             {/* Close Rate */}
             <motion.div
               variants={cardVariants}
-              className="rounded-xl border border-white/10 p-5 flex flex-col gap-3"
-              style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+              className={`rounded-2xl border ${t.border} p-5 flex flex-col gap-3 ${t.shadow} hover:-translate-y-0.5 transition-all duration-200`}
+              style={{ backgroundColor: t.cardBg, borderLeft: '4px solid #22C55E' }}
             >
               <div className="w-10 h-10 rounded-lg bg-green-500/15 flex items-center justify-center">
                 <TrendingUp size={20} className="text-green-400" />
               </div>
               <div>
-                <p className="text-white text-2xl font-bold leading-tight">{displayStats.closeRate}%</p>
-                <p className="text-white/40 text-xs mt-0.5">Close Rate</p>
+                <p className={`${t.text} text-2xl font-bold leading-tight`}>{displayStats.closeRate}%</p>
+                <p className={`${t.textDim} text-xs mt-0.5`}>Close Rate</p>
               </div>
             </motion.div>
 
             {/* Avg Call Duration */}
             <motion.div
               variants={cardVariants}
-              className="rounded-xl border border-white/10 p-5 flex flex-col gap-3"
-              style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+              className={`rounded-2xl border ${t.border} p-5 flex flex-col gap-3 ${t.shadow} hover:-translate-y-0.5 transition-all duration-200`}
+              style={{ backgroundColor: t.cardBg, borderLeft: '4px solid #F97316' }}
             >
               <div className="w-10 h-10 rounded-lg bg-orange-500/15 flex items-center justify-center">
                 <Clock size={20} className="text-orange-400" />
               </div>
               <div>
-                <p className="text-white text-2xl font-bold leading-tight">
+                <p className={`${t.text} text-2xl font-bold leading-tight`}>
                   {formatDuration(displayStats.avgDuration)}
                   {displayStats.avgDuration > 1800 && (
                     <span className="ml-2 text-sm">
@@ -218,22 +244,22 @@ export default function RepDetailView() {
                     </span>
                   )}
                 </p>
-                <p className="text-white/40 text-xs mt-0.5">Avg Call Duration</p>
+                <p className={`${t.textDim} text-xs mt-0.5`}>Avg Call Duration</p>
               </div>
             </motion.div>
 
             {/* Avg Savings Quoted */}
             <motion.div
               variants={cardVariants}
-              className="rounded-xl border border-white/10 p-5 flex flex-col gap-3"
-              style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+              className={`rounded-2xl border ${t.border} p-5 flex flex-col gap-3 ${t.shadow} hover:-translate-y-0.5 transition-all duration-200`}
+              style={{ backgroundColor: t.cardBg, borderLeft: '4px solid #A855F7' }}
             >
               <div className="w-10 h-10 rounded-lg bg-purple-500/15 flex items-center justify-center">
                 <DollarSign size={20} className="text-purple-400" />
               </div>
               <div>
-                <p className="text-white text-2xl font-bold leading-tight">{formatMoney(displayStats.avgSavings)}</p>
-                <p className="text-white/40 text-xs mt-0.5">Avg Savings Quoted</p>
+                <p className={`${t.text} text-2xl font-bold leading-tight`}>{formatMoney(displayStats.avgSavings)}</p>
+                <p className={`${t.textDim} text-xs mt-0.5`}>Avg Savings Quoted</p>
               </div>
             </motion.div>
           </motion.div>
@@ -241,25 +267,28 @@ export default function RepDetailView() {
 
         {/* ────────── LAST 10 PITCHES ────────── */}
         <section>
-          <h2 className="text-white text-lg font-bold tracking-tight mb-4">LAST 10 PITCHES</h2>
+          <h2 className={`${t.text} text-lg font-bold tracking-tight mb-4 flex items-center gap-2`}>
+            <span className="w-[3px] h-5 rounded-full bg-orange-500 inline-block" />
+            LAST 10 PITCHES
+          </h2>
           <div
-            className="rounded-xl border border-white/10 overflow-x-auto"
-            style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+            className={`rounded-2xl border ${t.border} overflow-x-auto ${t.shadow} transition-all duration-300`}
+            style={{ backgroundColor: t.cardBg }}
           >
             {displayPitches.length === 0 ? (
-              <div className="px-5 py-8 text-center text-white/40 text-sm">No pitch history available.</div>
+              <div className={`px-5 py-8 text-center ${t.textDim} text-sm`}>No pitch history available.</div>
             ) : (
               <table className="w-full min-w-[760px]">
                 <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="px-4 py-3 text-left text-xs uppercase tracking-wider font-semibold text-white/40">Date</th>
-                    <th className="px-4 py-3 text-left text-xs uppercase tracking-wider font-semibold text-white/40">Lead</th>
-                    <th className="px-4 py-3 text-center text-xs uppercase tracking-wider font-semibold text-white/40">Duration</th>
-                    <th className="px-4 py-3 text-center text-xs uppercase tracking-wider font-semibold text-white/40">Outcome</th>
-                    <th className="px-4 py-3 text-center text-xs uppercase tracking-wider font-semibold text-white/40">Price</th>
-                    <th className="px-4 py-3 text-center text-xs uppercase tracking-wider font-semibold text-white/40">Obj.</th>
-                    <th className="px-4 py-3 text-center text-xs uppercase tracking-wider font-semibold text-white/40">Adherence</th>
-                    <th className="px-4 py-3 text-right text-xs uppercase tracking-wider font-semibold text-white/40">Action</th>
+                  <tr className={`border-b ${t.border}`}>
+                    <th className={`px-4 py-3 text-left text-xs uppercase tracking-wider font-semibold ${t.textDim}`}>Date</th>
+                    <th className={`px-4 py-3 text-left text-xs uppercase tracking-wider font-semibold ${t.textDim}`}>Lead</th>
+                    <th className={`px-4 py-3 text-center text-xs uppercase tracking-wider font-semibold ${t.textDim}`}>Duration</th>
+                    <th className={`px-4 py-3 text-center text-xs uppercase tracking-wider font-semibold ${t.textDim}`}>Outcome</th>
+                    <th className={`px-4 py-3 text-center text-xs uppercase tracking-wider font-semibold ${t.textDim}`}>Price</th>
+                    <th className={`px-4 py-3 text-center text-xs uppercase tracking-wider font-semibold ${t.textDim}`}>Obj.</th>
+                    <th className={`px-4 py-3 text-center text-xs uppercase tracking-wider font-semibold ${t.textDim}`}>Adherence</th>
+                    <th className={`px-4 py-3 text-right text-xs uppercase tracking-wider font-semibold ${t.textDim}`}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -271,26 +300,26 @@ export default function RepDetailView() {
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: idx * 0.04, duration: 0.3 }}
-                        className={`${idx < displayPitches.length - 1 ? 'border-b border-white/5' : ''} hover:bg-white/[0.02] transition-colors`}
+                        className={`${idx < displayPitches.length - 1 ? `border-b ${t.rowBorder}` : ''} ${t.rowHover} transition-colors ${!isDark && idx % 2 === 1 ? 'bg-gray-50/50' : ''}`}
                       >
                         {/* Date + time */}
                         <td className="px-4 py-3">
-                          <p className="text-white/80 text-sm">{pitch.date}</p>
-                          <p className="text-white/40 text-xs">{pitch.time}</p>
+                          <p className={`${t.textMuted} text-sm`}>{pitch.date}</p>
+                          <p className={`${t.textDim} text-xs`}>{pitch.time}</p>
                         </td>
 
                         {/* Lead */}
                         <td className="px-4 py-3">
-                          <p className="text-white text-sm font-semibold">{pitch.leadName}</p>
-                          <p className="text-white/40 text-xs">{pitch.businessName}</p>
+                          <p className={`${t.text} text-sm font-semibold`}>{pitch.leadName}</p>
+                          <p className={`${t.textDim} text-xs`}>{pitch.businessName}</p>
                         </td>
 
                         {/* Duration */}
                         <td className="px-4 py-3 text-center">
-                          <span className="text-white/70 text-sm">{formatDuration(pitch.duration)}</span>
+                          <span className={`${t.textMuted} text-sm`}>{formatDuration(pitch.duration)}</span>
                           {pitch.duration > 1800 && (
                             <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-yellow-500/15 text-yellow-400 border border-yellow-500/20">
-                              ⚠️ Over
+                              Over
                             </span>
                           )}
                         </td>
@@ -305,12 +334,12 @@ export default function RepDetailView() {
 
                         {/* Price */}
                         <td className="px-4 py-3 text-center">
-                          <span className="text-white/80 text-sm font-medium">{formatMoney(pitch.priceQuoted)}</span>
+                          <span className={`${t.textMuted} text-sm font-medium`}>{formatMoney(pitch.priceQuoted)}</span>
                         </td>
 
                         {/* Objections */}
                         <td className="px-4 py-3 text-center">
-                          <span className="text-white/60 text-sm">{pitch.objectionsHandled}</span>
+                          <span className={`${t.textDim} text-sm`}>{pitch.objectionsHandled}</span>
                         </td>
 
                         {/* Script adherence */}
@@ -364,7 +393,7 @@ export default function RepDetailView() {
                               };
                               setScorecardSession(scData);
                             }}
-                            className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/60 text-xs font-medium hover:bg-white/10 hover:text-white/80 transition-colors"
+                            className={`px-3 py-1.5 rounded-lg ${t.btnBg} border ${t.border} ${t.btnText} text-xs font-medium ${t.btnHover} hover:border-orange-500/30 hover:text-orange-400 transition-all duration-200`}
                           >
                             Scorecard
                           </button>
@@ -380,28 +409,34 @@ export default function RepDetailView() {
 
         {/* ────────── AI INSIGHTS ────────── */}
         <section className="pb-8">
+          <h2 className={`${t.text} text-lg font-bold tracking-tight mb-4 flex items-center gap-2`}>
+            <span className="w-[3px] h-5 rounded-full bg-orange-500 inline-block" />
+            AI INSIGHTS
+          </h2>
           <motion.div
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: 'easeOut' }}
-            className="rounded-xl p-[1px]"
+            className="rounded-2xl p-[1.5px]"
             style={{
-              background: 'linear-gradient(135deg, #8B5CF6, #3B82F6, #8B5CF6)',
+              background: 'linear-gradient(135deg, #8B5CF6, #3B82F6, #F97316, #8B5CF6)',
+              backgroundSize: '300% 300%',
+              animation: 'gradient-shift 6s ease infinite',
             }}
           >
             <div
-              className="rounded-xl p-5 space-y-4"
-              style={{ backgroundColor: '#18181f' }}
+              className={`rounded-2xl p-5 space-y-4 ${t.shadow}`}
+              style={{ backgroundColor: t.insightsBg }}
             >
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-purple-500/15 flex items-center justify-center">
                   <Sparkles size={18} className="text-purple-400" />
                 </div>
-                <h3 className="text-white text-base font-bold">AI Insights</h3>
+                <h3 className={`${t.text} text-base font-bold`}>AI Insights</h3>
               </div>
 
               {insights.length === 0 ? (
-                <p className="text-white/40 text-sm">No insights available for this rep.</p>
+                <p className={`${t.textDim} text-sm`}>No insights available for this rep.</p>
               ) : (
                 <ul className="space-y-3">
                   {insights.map((insight, idx) => (
@@ -426,6 +461,15 @@ export default function RepDetailView() {
         sessionData={scorecardSession}
         onDone={() => setScorecardSession(null)}
       />
+
+      {/* Gradient animation keyframes */}
+      <style>{`
+        @keyframes gradient-shift {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+      `}</style>
     </div>
   );
 }

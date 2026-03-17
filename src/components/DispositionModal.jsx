@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Calendar, MessageSquare, Plus, X, DollarSign, ArrowRight } from 'lucide-react';
+import { Check, Calendar, MessageSquare, Plus, X, DollarSign, ArrowRight, ChevronDown } from 'lucide-react';
+import { useApp } from '../context/AppContext';
 
 const NOT_INTERESTED_REASONS = [
   'Mistake',
@@ -17,51 +18,73 @@ const NOT_INTERESTED_REASONS = [
 
 const PAYMENT_METHODS = ['Visa', 'Mastercard', 'Amex', 'Discover'];
 
-function PaymentTerms({ label, price, selected, onChange }) {
+export const PRODUCT_CATALOG = [
+  { id: 'btp', name: 'Business Tax Preparation', defaultPrice: 999 },
+  { id: 'ptp', name: 'Personal Tax Preparation', defaultPrice: 429 },
+  { id: 'tax_advisory', name: 'Tax Advisory', defaultPrice: 2499 },
+  { id: 'payroll', name: 'Payroll', defaultPrice: 1221 },
+  { id: 'bookkeeping', name: 'Bookkeeping', defaultPrice: 2599 },
+  { id: 'audit_biz', name: 'Audit Defense - Business', defaultPrice: 295 },
+  { id: 'audit_personal', name: 'Audit Defense - Personal', defaultPrice: 155 },
+  { id: 'form_1023', name: 'Form 1023', defaultPrice: 2049 },
+  { id: 'qet', name: 'Quarterly Estimated Taxes', defaultPrice: 625 },
+  { id: 'sales_use', name: 'Sales & Use Tax', defaultPrice: 1899 },
+  { id: 'two_year', name: 'Two-Year Review', defaultPrice: 399 },
+  { id: 'bk_advisory', name: 'Bookkeeping Advisory', defaultPrice: 599 },
+];
+
+function getFirstPayment(price, terms) {
+  const p = parseFloat(price) || 0;
+  if (terms === '2-pay') return Math.ceil((p / 2) * 100) / 100;
+  if (terms === '3-pay') return Math.ceil((p / 3) * 100) / 100;
+  if (terms === '4-pay') return Math.ceil((p / 4) * 100) / 100;
+  return p;
+}
+
+function termsLabel(terms) {
+  if (terms === '2-pay') return '2-Pay';
+  if (terms === '3-pay') return '3-Pay';
+  if (terms === '4-pay') return '4-Pay';
+  return 'Full Pay';
+}
+
+function PaymentTermButtons({ price, selected, onChange, compact }) {
   const options = [
-    { key: 'full', label: 'Full Pay', amount: price },
-    { key: '2-pay', label: '2-Pay', amount: price / 2 },
-    { key: '3-pay', label: '3-Pay', amount: Math.ceil((price / 3) * 100) / 100 },
-    { key: '4-pay', label: '4-Pay', amount: Math.ceil((price / 4) * 100) / 100 },
+    { key: 'full', label: 'Full' },
+    { key: '2-pay', label: '2-Pay' },
+    { key: '3-pay', label: '3-Pay' },
+    { key: '4-pay', label: '4-Pay' },
   ];
 
   return (
-    <div className="mt-2">
-      <p className="text-white/50 text-xs mb-1.5">{label}</p>
-      <div className="flex gap-1.5">
-        {options.map((opt) => (
+    <div className={`flex gap-1.5 ${compact ? 'mt-1' : 'mt-2'}`}>
+      {options.map((opt) => {
+        const amount = getFirstPayment(price, opt.key);
+        return (
           <button
             key={opt.key}
             type="button"
             onClick={() => onChange(opt.key)}
-            className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            className={`flex-1 rounded-lg text-xs font-medium transition-all ${compact ? 'px-1.5 py-1' : 'px-2 py-1.5'} ${
               selected === opt.key
                 ? 'bg-brand-orange/20 border-brand-orange/40 text-brand-orange border'
                 : 'bg-white/5 border border-white/10 text-white/50 hover:bg-white/10'
             }`}
           >
             <div>{opt.label}</div>
-            <div className="text-[10px] mt-0.5">${opt.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            {!compact && (
+              <div className="text-[10px] mt-0.5">${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            )}
           </button>
-        ))}
-      </div>
+        );
+      })}
     </div>
   );
 }
 
 export default function DispositionModal({ show, leadData, callDuration, pricing, computedSavings, onSubmit }) {
-  const [disposition, setDisposition] = useState(null); // 'closed' | 'follow-up' | 'no-sale'
-
-  // Sale fields
-  const [products, setProducts] = useState([
-    { name: 'Core Accounting Package', price: 2949, terms: '', checked: true },
-    { name: 'Bookkeeping Full Service', price: '', terms: '', checked: false },
-    { name: 'Payroll', price: '', terms: '', checked: false },
-  ]);
-  const [alaCarteItems, setAlaCarteItems] = useState([]);
-  const [paymentMethod, setPaymentMethod] = useState('Visa');
-  const [progressMeeting, setProgressMeeting] = useState('');
-  const [saleNotes, setSaleNotes] = useState('');
+  const { orderProducts, setOrderProducts, orderPaymentMethod, setOrderPaymentMethod } = useApp();
+  const [disposition, setDisposition] = useState(null);
 
   // Follow-up fields
   const [followUpDate, setFollowUpDate] = useState('');
@@ -73,48 +96,44 @@ export default function DispositionModal({ show, leadData, callDuration, pricing
   const [niReason, setNiReason] = useState('');
   const [niNotes, setNiNotes] = useState('');
 
-  // Products calculation
-  const activeProducts = useMemo(() => {
-    const checked = products.filter(p => p.checked && p.price > 0);
-    const alaCarte = alaCarteItems.filter(a => a.name && a.price > 0);
-    return [...checked, ...alaCarte];
-  }, [products, alaCarteItems]);
+  // Sale fields
+  const [progressMeeting, setProgressMeeting] = useState('');
+  const [saleNotes, setSaleNotes] = useState('');
 
+  // Available products (not yet in order)
+  const availableAddons = useMemo(() => {
+    const usedIds = orderProducts.map(p => p.id);
+    return PRODUCT_CATALOG.filter(p => !usedIds.includes(p.id));
+  }, [orderProducts]);
+
+  const addProduct = (catalogId) => {
+    const item = PRODUCT_CATALOG.find(p => p.id === catalogId);
+    if (!item) return;
+    setOrderProducts(prev => [...prev, { id: item.id, name: item.name, price: item.defaultPrice, terms: 'full', locked: false }]);
+  };
+
+  const removeProduct = (id) => {
+    setOrderProducts(prev => prev.filter(p => p.id !== id));
+  };
+
+  const updateProduct = (id, field, value) => {
+    setOrderProducts(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
+  };
+
+  // Totals
   const totalSale = useMemo(() => {
-    return activeProducts.reduce((sum, p) => sum + (parseFloat(p.price) || 0), 0);
-  }, [activeProducts]);
+    return orderProducts.reduce((sum, p) => sum + (parseFloat(p.price) || 0), 0);
+  }, [orderProducts]);
 
   const firstPayment = useMemo(() => {
-    return activeProducts.reduce((sum, p) => {
-      const price = parseFloat(p.price) || 0;
-      if (p.terms === '2-pay') return sum + price / 2;
-      if (p.terms === '3-pay') return sum + Math.ceil((price / 3) * 100) / 100;
-      if (p.terms === '4-pay') return sum + Math.ceil((price / 4) * 100) / 100;
-      return sum + price; // full pay or no terms yet
-    }, 0);
-  }, [activeProducts]);
-
-  const updateProduct = (index, field, value) => {
-    setProducts(prev => prev.map((p, i) => i === index ? { ...p, [field]: value } : p));
-  };
-
-  const addAlaCarteItem = () => {
-    setAlaCarteItems(prev => [...prev, { name: '', price: '', terms: '', checked: true }]);
-  };
-
-  const updateAlaCarte = (index, field, value) => {
-    setAlaCarteItems(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
-  };
-
-  const removeAlaCarte = (index) => {
-    setAlaCarteItems(prev => prev.filter((_, i) => i !== index));
-  };
+    return orderProducts.reduce((sum, p) => sum + getFirstPayment(p.price, p.terms), 0);
+  }, [orderProducts]);
 
   // Validation
   const isValid = useMemo(() => {
     if (!disposition) return false;
     if (disposition === 'closed') {
-      return activeProducts.length > 0 && activeProducts.every(p => p.terms);
+      return orderProducts.length > 0 && orderProducts.every(p => p.terms && parseFloat(p.price) > 0);
     }
     if (disposition === 'follow-up') {
       return followUpDate && followUpReason.trim() && followUpTemp;
@@ -123,7 +142,7 @@ export default function DispositionModal({ show, leadData, callDuration, pricing
       return !!niReason;
     }
     return false;
-  }, [disposition, activeProducts, followUpDate, followUpReason, followUpTemp, niReason]);
+  }, [disposition, orderProducts, followUpDate, followUpReason, followUpTemp, niReason]);
 
   const handleSubmit = () => {
     if (!isValid) return;
@@ -131,18 +150,15 @@ export default function DispositionModal({ show, leadData, callDuration, pricing
     const data = {
       disposition,
       ...(disposition === 'closed' ? {
-        products: activeProducts.map(p => ({
+        products: orderProducts.map(p => ({
           name: p.name,
           price: parseFloat(p.price),
           terms: p.terms,
-          perPayment: p.terms === '2-pay' ? parseFloat(p.price) / 2
-            : p.terms === '3-pay' ? Math.ceil((parseFloat(p.price) / 3) * 100) / 100
-            : p.terms === '4-pay' ? Math.ceil((parseFloat(p.price) / 4) * 100) / 100
-            : parseFloat(p.price),
+          perPayment: getFirstPayment(p.price, p.terms),
         })),
         totalSale,
         firstPaymentAmount: firstPayment,
-        paymentMethod,
+        paymentMethod: orderPaymentMethod,
         progressMeeting,
         notes: saleNotes,
       } : {}),
@@ -174,7 +190,6 @@ export default function DispositionModal({ show, leadData, callDuration, pricing
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm"
-      // No onClick to close — mandatory
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -229,110 +244,71 @@ export default function DispositionModal({ show, leadData, callDuration, pricing
                 exit={{ opacity: 0, y: -10 }}
                 className="space-y-4"
               >
-                {/* FUTURE: When Chrome extension audio capture is active, auto-populate
-                    products and pricing from the call audio using AI transcription.
-                    The rep would just confirm what the AI detected instead of entering manually.
-                    For now, manual entry is required. */}
                 <h3 className="text-sm font-bold text-white/70 uppercase tracking-wider">Products Sold</h3>
 
-                {/* Core products */}
-                {products.map((product, i) => (
-                  <div key={i} className={`p-3 rounded-xl border ${product.checked ? 'border-brand-orange/30 bg-brand-orange/5' : 'border-white/10 bg-white/[0.02]'}`}>
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={product.checked}
-                        onChange={(e) => updateProduct(i, 'checked', e.target.checked)}
-                        className="w-4 h-4 rounded accent-brand-orange"
-                      />
-                      <span className={`text-sm font-medium ${product.checked ? 'text-white' : 'text-white/40'}`}>
-                        {product.name}
-                      </span>
-                      {i === 0 ? (
-                        <span className="ml-auto text-sm font-bold text-brand-orange">${product.price.toLocaleString()}</span>
+                {/* Product rows */}
+                {orderProducts.map((product) => (
+                  <div key={product.id} className="p-3 rounded-xl border border-brand-orange/30 bg-brand-orange/5">
+                    <div className="flex items-center gap-3">
+                      <Check size={14} className="text-brand-orange shrink-0" />
+                      <span className="text-sm font-medium text-white flex-1">{product.name}</span>
+                      {product.locked ? (
+                        <span className="text-sm font-bold text-brand-orange">${parseFloat(product.price).toLocaleString()}</span>
                       ) : (
-                        <div className="ml-auto flex items-center gap-1">
+                        <div className="flex items-center gap-1">
                           <span className="text-white/30 text-sm">$</span>
                           <input
                             type="number"
                             value={product.price}
-                            onChange={(e) => updateProduct(i, 'price', e.target.value)}
-                            placeholder="0"
-                            disabled={!product.checked}
-                            className="w-24 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm text-white text-right outline-none focus:border-brand-orange/40 disabled:opacity-30"
+                            onChange={(e) => updateProduct(product.id, 'price', e.target.value)}
+                            className="w-24 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm text-white text-right outline-none focus:border-brand-orange/40"
                           />
                         </div>
                       )}
-                    </label>
-                    {product.checked && (parseFloat(product.price) > 0 || i === 0) && (
-                      <PaymentTerms
-                        label={`Payment terms for ${product.name}:`}
-                        price={parseFloat(product.price) || 0}
-                        selected={product.terms}
-                        onChange={(terms) => updateProduct(i, 'terms', terms)}
-                      />
-                    )}
-                  </div>
-                ))}
-
-                {/* À la carte items */}
-                {alaCarteItems.map((item, i) => (
-                  <div key={`alc-${i}`} className={`p-3 rounded-xl border ${item.price ? 'border-brand-orange/30 bg-brand-orange/5' : 'border-white/10 bg-white/[0.02]'}`}>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={item.name}
-                        onChange={(e) => updateAlaCarte(i, 'name', e.target.value)}
-                        placeholder="Product name"
-                        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white outline-none focus:border-brand-orange/40 placeholder-white/20"
-                      />
-                      <div className="flex items-center gap-1">
-                        <span className="text-white/30 text-sm">$</span>
-                        <input
-                          type="number"
-                          value={item.price}
-                          onChange={(e) => updateAlaCarte(i, 'price', e.target.value)}
-                          placeholder="0"
-                          className="w-24 bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-sm text-white text-right outline-none focus:border-brand-orange/40"
-                        />
-                      </div>
-                      <button onClick={() => removeAlaCarte(i)} className="p-1 text-white/30 hover:text-red-400">
-                        <X size={14} />
-                      </button>
+                      {!product.locked && (
+                        <button onClick={() => removeProduct(product.id)} className="p-1 text-white/30 hover:text-red-400">
+                          <X size={14} />
+                        </button>
+                      )}
                     </div>
-                    {item.name && parseFloat(item.price) > 0 && (
-                      <PaymentTerms
-                        label={`Payment terms for ${item.name}:`}
-                        price={parseFloat(item.price) || 0}
-                        selected={item.terms}
-                        onChange={(terms) => updateAlaCarte(i, 'terms', terms)}
-                      />
-                    )}
+                    <PaymentTermButtons
+                      price={product.price}
+                      selected={product.terms}
+                      onChange={(terms) => updateProduct(product.id, 'terms', terms)}
+                    />
                   </div>
                 ))}
 
-                <button
-                  onClick={addAlaCarteItem}
-                  className="flex items-center gap-1.5 text-brand-orange/70 hover:text-brand-orange text-xs font-medium"
-                >
-                  <Plus size={14} /> Add Another Item
-                </button>
+                {/* Add Product dropdown */}
+                {availableAddons.length > 0 && (
+                  <div className="relative">
+                    <select
+                      value=""
+                      onChange={(e) => { if (e.target.value) addProduct(e.target.value); }}
+                      className="w-full appearance-none bg-white/5 border border-dashed border-white/15 rounded-xl px-4 py-3 text-sm text-white/50 outline-none focus:border-brand-orange/40 cursor-pointer hover:bg-white/[0.07] transition-colors"
+                    >
+                      <option value="" className="bg-[#1a1a22]">+ Add Product</option>
+                      {availableAddons.map(p => (
+                        <option key={p.id} value={p.id} className="bg-[#1a1a22] text-white">
+                          {p.name} — ${p.defaultPrice.toLocaleString()}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+                  </div>
+                )}
 
-                {/* Order summary */}
-                {activeProducts.length > 0 && (
+                {/* Order Summary */}
+                {orderProducts.length > 0 && (
                   <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10">
                     <h4 className="text-xs font-bold text-white/50 uppercase tracking-wider mb-3">Order Summary</h4>
                     <div className="space-y-1.5">
-                      {activeProducts.map((p, i) => (
-                        <div key={i} className="flex justify-between text-sm">
+                      {orderProducts.map((p) => (
+                        <div key={p.id} className="flex justify-between text-sm">
                           <span className="text-white/70">{p.name}</span>
                           <span className="text-white font-medium">
                             ${parseFloat(p.price).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            {p.terms && p.terms !== 'full' && (
-                              <span className="text-white/30 text-xs ml-1">
-                                ({p.terms})
-                              </span>
-                            )}
+                            <span className="text-white/30 text-xs ml-1">({termsLabel(p.terms)})</span>
                           </span>
                         </div>
                       ))}
@@ -353,8 +329,8 @@ export default function DispositionModal({ show, leadData, callDuration, pricing
                 <div>
                   <label className="text-xs text-white/50 block mb-1">Payment Method</label>
                   <select
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    value={orderPaymentMethod}
+                    onChange={(e) => setOrderPaymentMethod(e.target.value)}
                     className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-brand-orange/40"
                   >
                     {PAYMENT_METHODS.map(m => <option key={m} value={m}>{m}</option>)}

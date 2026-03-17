@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
+import LoginPage from './components/LoginPage';
 import LaunchScreen from './components/LaunchScreen';
 import PresenterPanel from './components/PresenterPanel';
 import ViewerView from './components/ViewerView';
@@ -14,7 +15,8 @@ function App() {
       <BrowserRouter>
         <div className="font-dm min-h-screen">
           <Routes>
-            <Route path="/" element={<LaunchScreen />} />
+            <Route path="/" element={<LoginPage />} />
+            <Route path="/home" element={<LaunchScreen />} />
             <Route path="/present" element={<PresenterPanel />} />
             <Route path="/viewer" element={<ViewerView />} />
             <Route path="/manager" element={<ManagerHub />} />
